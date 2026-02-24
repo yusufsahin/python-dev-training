@@ -1,0 +1,1 @@
+Merhaba Dünya! Python random access demo.

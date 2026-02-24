@@ -1,0 +1,5 @@
+Merhaba Dünya!
+Bu, os modulü ile belirtilen dosya yoludur.
+Bu, os modulü ile belirtilen dosya yoludur. satır 2
+Merhaba Dünya!
+Bu, pathlib modülü ile belirtilen dosya yoludur.
