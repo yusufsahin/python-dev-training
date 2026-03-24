@@ -1,0 +1,877 @@
+Ogrenci Ders Merkezi (ODM)
+
+
+-- Prompt ile analizi soru cevap şekilde Chat GPT ile yapılacak.
+-- Çıkan analiz & tasarım sonucu ask Modunda cursor ile paylaşılacak
+--refactor Antigravity ile optimize edilecek
+--Bug lar Github Copilot ile düzeltilecek
+--Web UI için ilerde Figma kullanılacak
+--Analiz ve Tasarım Claude de verilip geribildirim ve iyileştirmeler yapılacak
+--Unit testler - Codex e yazıdırılabilir
+-faker ile test datası  generate et
+
+Bu sürüm:
+
+basit
+MS SQL uyumlu
+büyütülebilir
+öğrenci / öğretmen / ders / grup / yoklama / sınav akışını kapsıyor
+Klasör yapısı
+student-course-center/
+├─ README.md
+├─ PROMPT_FOR_CURSOR.md
+└─ database/
+   ├─ 00_create_database.sql
+   ├─ 01_schema.sql
+   ├─ 02_views.sql
+   ├─ 03_procedures.sql
+   ├─ 04_seed.sql
+   └─ 99_smoke_test.sql
+PROMPT_FOR_CURSOR.md
+Bu repo için SQL Server tabanlı basit bir öğrenci-ders-öğretmen-dershane sistemi geliştir.
+
+Kurallar:
+- Veritabanı SQL Server olacak.
+- Database-first ilerle.
+- Önce database scriptlerini çalıştır.
+- Tablo isimlerini ve kolon isimlerini bozmadan kullan.
+- İngilizce entity isimlerini koru.
+- İlişkileri foreign key üzerinden kur.
+- API katmanı geliştirilecekse CRUD endpointleri şu modüller için üret:
+  - Students
+  - Teachers
+  - Courses
+  - AcademicTerms
+  - ClassGroups
+  - StudentEnrollments
+  - LessonSchedules
+  - AttendanceRecords
+  - Exams
+  - ExamResults
+- Soft delete yerine şimdilik IsActive kullan.
+- Listeleme ekranları için view’ları kullan.
+- Kayıt, yoklama ve sınav notu işlemlerinde stored procedure kullan.
+- Validation ekle:
+  - Aynı öğrenci aynı gruba ikinci kez eklenemez
+  - Grup kapasitesi aşılmaz
+  - Sınav notu toplam puanı geçemez
+  - Attendance status sadece Present/Absent/Late/Excused olabilir
+- UI geliştirilirse temel ekranlar:
+  - Öğrenci listesi / detay
+  - Öğretmen listesi / detay
+  - Ders listesi
+  - Grup listesi
+  - Öğrenciyi gruba kaydetme
+  - Yoklama giriş ekranı
+  - Sınav ve not giriş ekranı
+- Kod üretirken katmanlı yapı kullan:
+  - Domain
+  - Application
+  - Infrastructure
+  - Api
+- SQL scriptleri migration gibi sırayla çalıştırılmalı.
+README.md
+# Student Course Center
+
+Basit öğrenci / ders / öğretmen / dershane yönetim sistemi için SQL Server veritabanı tasarımı.
+
+## Kapsam
+- Dershane (Institution)
+- Dönem (AcademicTerm)
+- Öğrenci (Student)
+- Öğretmen (Teacher)
+- Ders (Course)
+- Öğretmen-Ders eşleşmesi
+- Grup / Sınıf (ClassGroup)
+- Öğrenci kayıtları (StudentEnrollment)
+- Haftalık program (LessonSchedule)
+- Yoklama (AttendanceRecord)
+- Sınav (Exam)
+- Sınav sonucu (ExamResult)
+
+## Kurulum sırası
+1. `00_create_database.sql`
+2. `01_schema.sql`
+3. `02_views.sql`
+4. `03_procedures.sql`
+5. `04_seed.sql`
+6. `99_smoke_test.sql`
+
+## Notlar
+- SQL Server Management Studio veya Azure Data Studio ile çalıştırılabilir.
+- Tüm scriptler `GO` batch ayracı kullanır.
+- Varsayılan veritabanı adı: `StudentCourseCenterDb`
+database/00_create_database.sql
+IF DB_ID(N'StudentCourseCenterDb') IS NULL
+BEGIN
+    CREATE DATABASE [StudentCourseCenterDb];
+END
+GO
+
+USE [StudentCourseCenterDb];
+GO
+database/01_schema.sql
+USE [StudentCourseCenterDb];
+GO
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+IF OBJECT_ID(N'dbo.Institutions', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Institutions
+    (
+        InstitutionId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Name NVARCHAR(200) NOT NULL,
+        Phone NVARCHAR(30) NULL,
+        Email NVARCHAR(150) NULL,
+        Address NVARCHAR(500) NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_Institutions_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Institutions_CreatedAt DEFAULT (SYSDATETIME())
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.AcademicTerms', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AcademicTerms
+    (
+        AcademicTermId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        InstitutionId INT NOT NULL,
+        TermName NVARCHAR(100) NOT NULL,
+        StartDate DATE NOT NULL,
+        EndDate DATE NOT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_AcademicTerms_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_AcademicTerms_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_AcademicTerms_Institutions
+            FOREIGN KEY (InstitutionId) REFERENCES dbo.Institutions(InstitutionId),
+
+        CONSTRAINT CHK_AcademicTerms_DateRange
+            CHECK (StartDate <= EndDate)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.Students', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Students
+    (
+        StudentId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        InstitutionId INT NOT NULL,
+        StudentNo NVARCHAR(30) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        BirthDate DATE NULL,
+        Gender NVARCHAR(20) NULL,
+        Phone NVARCHAR(30) NULL,
+        Email NVARCHAR(150) NULL,
+        SchoolName NVARCHAR(200) NULL,
+        GradeLevel INT NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_Students_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Students_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_Students_Institutions
+            FOREIGN KEY (InstitutionId) REFERENCES dbo.Institutions(InstitutionId),
+
+        CONSTRAINT UQ_Students_Institution_StudentNo
+            UNIQUE (InstitutionId, StudentNo)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.Teachers', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Teachers
+    (
+        TeacherId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        InstitutionId INT NOT NULL,
+        TeacherNo NVARCHAR(30) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        Phone NVARCHAR(30) NULL,
+        Email NVARCHAR(150) NULL,
+        HireDate DATE NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_Teachers_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Teachers_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_Teachers_Institutions
+            FOREIGN KEY (InstitutionId) REFERENCES dbo.Institutions(InstitutionId),
+
+        CONSTRAINT UQ_Teachers_Institution_TeacherNo
+            UNIQUE (InstitutionId, TeacherNo)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.Courses', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Courses
+    (
+        CourseId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        InstitutionId INT NOT NULL,
+        CourseCode NVARCHAR(30) NOT NULL,
+        CourseName NVARCHAR(150) NOT NULL,
+        Description NVARCHAR(500) NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_Courses_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Courses_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_Courses_Institutions
+            FOREIGN KEY (InstitutionId) REFERENCES dbo.Institutions(InstitutionId),
+
+        CONSTRAINT UQ_Courses_Institution_CourseCode
+            UNIQUE (InstitutionId, CourseCode)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.TeacherCourses', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TeacherCourses
+    (
+        TeacherCourseId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TeacherId INT NOT NULL,
+        CourseId INT NOT NULL,
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_TeacherCourses_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_TeacherCourses_Teachers
+            FOREIGN KEY (TeacherId) REFERENCES dbo.Teachers(TeacherId),
+
+        CONSTRAINT FK_TeacherCourses_Courses
+            FOREIGN KEY (CourseId) REFERENCES dbo.Courses(CourseId),
+
+        CONSTRAINT UQ_TeacherCourses_Teacher_Course
+            UNIQUE (TeacherId, CourseId)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.ClassGroups', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClassGroups
+    (
+        ClassGroupId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        InstitutionId INT NOT NULL,
+        AcademicTermId INT NOT NULL,
+        CourseId INT NOT NULL,
+        TeacherId INT NOT NULL,
+        GroupCode NVARCHAR(30) NOT NULL,
+        GroupName NVARCHAR(150) NOT NULL,
+        Capacity INT NOT NULL CONSTRAINT DF_ClassGroups_Capacity DEFAULT (20),
+        Classroom NVARCHAR(50) NULL,
+        IsActive BIT NOT NULL CONSTRAINT DF_ClassGroups_IsActive DEFAULT (1),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_ClassGroups_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_ClassGroups_Institutions
+            FOREIGN KEY (InstitutionId) REFERENCES dbo.Institutions(InstitutionId),
+
+        CONSTRAINT FK_ClassGroups_AcademicTerms
+            FOREIGN KEY (AcademicTermId) REFERENCES dbo.AcademicTerms(AcademicTermId),
+
+        CONSTRAINT FK_ClassGroups_Courses
+            FOREIGN KEY (CourseId) REFERENCES dbo.Courses(CourseId),
+
+        CONSTRAINT FK_ClassGroups_Teachers
+            FOREIGN KEY (TeacherId) REFERENCES dbo.Teachers(TeacherId),
+
+        CONSTRAINT UQ_ClassGroups_Institution_GroupCode
+            UNIQUE (InstitutionId, GroupCode),
+
+        CONSTRAINT CHK_ClassGroups_Capacity
+            CHECK (Capacity > 0)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.StudentEnrollments', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.StudentEnrollments
+    (
+        StudentEnrollmentId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        StudentId INT NOT NULL,
+        ClassGroupId INT NOT NULL,
+        EnrollDate DATE NOT NULL CONSTRAINT DF_StudentEnrollments_EnrollDate DEFAULT (CAST(GETDATE() AS DATE)),
+        EnrollmentStatus NVARCHAR(20) NOT NULL CONSTRAINT DF_StudentEnrollments_Status DEFAULT (N'Active'),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_StudentEnrollments_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_StudentEnrollments_Students
+            FOREIGN KEY (StudentId) REFERENCES dbo.Students(StudentId),
+
+        CONSTRAINT FK_StudentEnrollments_ClassGroups
+            FOREIGN KEY (ClassGroupId) REFERENCES dbo.ClassGroups(ClassGroupId),
+
+        CONSTRAINT UQ_StudentEnrollments_Student_ClassGroup
+            UNIQUE (StudentId, ClassGroupId),
+
+        CONSTRAINT CHK_StudentEnrollments_Status
+            CHECK (EnrollmentStatus IN (N'Active', N'Left', N'Completed'))
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.LessonSchedules', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.LessonSchedules
+    (
+        LessonScheduleId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ClassGroupId INT NOT NULL,
+        DayOfWeek TINYINT NOT NULL,
+        StartTime TIME(0) NOT NULL,
+        EndTime TIME(0) NOT NULL,
+        Room NVARCHAR(50) NULL,
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_LessonSchedules_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_LessonSchedules_ClassGroups
+            FOREIGN KEY (ClassGroupId) REFERENCES dbo.ClassGroups(ClassGroupId),
+
+        CONSTRAINT CHK_LessonSchedules_DayOfWeek
+            CHECK (DayOfWeek BETWEEN 1 AND 7),
+
+        CONSTRAINT CHK_LessonSchedules_Time
+            CHECK (StartTime < EndTime)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.AttendanceRecords', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AttendanceRecords
+    (
+        AttendanceRecordId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ClassGroupId INT NOT NULL,
+        StudentId INT NOT NULL,
+        LessonDate DATE NOT NULL,
+        AttendanceStatus NVARCHAR(20) NOT NULL,
+        Note NVARCHAR(300) NULL,
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_AttendanceRecords_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_AttendanceRecords_ClassGroups
+            FOREIGN KEY (ClassGroupId) REFERENCES dbo.ClassGroups(ClassGroupId),
+
+        CONSTRAINT FK_AttendanceRecords_Students
+            FOREIGN KEY (StudentId) REFERENCES dbo.Students(StudentId),
+
+        CONSTRAINT UQ_AttendanceRecords_Group_Student_Date
+            UNIQUE (ClassGroupId, StudentId, LessonDate),
+
+        CONSTRAINT CHK_AttendanceRecords_Status
+            CHECK (AttendanceStatus IN (N'Present', N'Absent', N'Late', N'Excused'))
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.Exams', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Exams
+    (
+        ExamId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ClassGroupId INT NOT NULL,
+        ExamName NVARCHAR(150) NOT NULL,
+        ExamDate DATE NOT NULL,
+        TotalScore DECIMAL(5,2) NOT NULL CONSTRAINT DF_Exams_TotalScore DEFAULT (100),
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Exams_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_Exams_ClassGroups
+            FOREIGN KEY (ClassGroupId) REFERENCES dbo.ClassGroups(ClassGroupId),
+
+        CONSTRAINT CHK_Exams_TotalScore
+            CHECK (TotalScore > 0)
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.ExamResults', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ExamResults
+    (
+        ExamResultId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ExamId INT NOT NULL,
+        StudentId INT NOT NULL,
+        Score DECIMAL(5,2) NOT NULL,
+        Note NVARCHAR(300) NULL,
+        CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_ExamResults_CreatedAt DEFAULT (SYSDATETIME()),
+
+        CONSTRAINT FK_ExamResults_Exams
+            FOREIGN KEY (ExamId) REFERENCES dbo.Exams(ExamId),
+
+        CONSTRAINT FK_ExamResults_Students
+            FOREIGN KEY (StudentId) REFERENCES dbo.Students(StudentId),
+
+        CONSTRAINT UQ_ExamResults_Exam_Student
+            UNIQUE (ExamId, StudentId)
+    );
+END
+GO
+
+/* =========================================================
+   INDEXES
+   ========================================================= */
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Students_InstitutionId' AND object_id = OBJECT_ID(N'dbo.Students'))
+    CREATE INDEX IX_Students_InstitutionId ON dbo.Students(InstitutionId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Teachers_InstitutionId' AND object_id = OBJECT_ID(N'dbo.Teachers'))
+    CREATE INDEX IX_Teachers_InstitutionId ON dbo.Teachers(InstitutionId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Courses_InstitutionId' AND object_id = OBJECT_ID(N'dbo.Courses'))
+    CREATE INDEX IX_Courses_InstitutionId ON dbo.Courses(InstitutionId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ClassGroups_AcademicTermId' AND object_id = OBJECT_ID(N'dbo.ClassGroups'))
+    CREATE INDEX IX_ClassGroups_AcademicTermId ON dbo.ClassGroups(AcademicTermId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ClassGroups_CourseId' AND object_id = OBJECT_ID(N'dbo.ClassGroups'))
+    CREATE INDEX IX_ClassGroups_CourseId ON dbo.ClassGroups(CourseId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ClassGroups_TeacherId' AND object_id = OBJECT_ID(N'dbo.ClassGroups'))
+    CREATE INDEX IX_ClassGroups_TeacherId ON dbo.ClassGroups(TeacherId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_StudentEnrollments_StudentId' AND object_id = OBJECT_ID(N'dbo.StudentEnrollments'))
+    CREATE INDEX IX_StudentEnrollments_StudentId ON dbo.StudentEnrollments(StudentId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_StudentEnrollments_ClassGroupId' AND object_id = OBJECT_ID(N'dbo.StudentEnrollments'))
+    CREATE INDEX IX_StudentEnrollments_ClassGroupId ON dbo.StudentEnrollments(ClassGroupId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AttendanceRecords_StudentId' AND object_id = OBJECT_ID(N'dbo.AttendanceRecords'))
+    CREATE INDEX IX_AttendanceRecords_StudentId ON dbo.AttendanceRecords(StudentId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AttendanceRecords_ClassGroup_LessonDate' AND object_id = OBJECT_ID(N'dbo.AttendanceRecords'))
+    CREATE INDEX IX_AttendanceRecords_ClassGroup_LessonDate ON dbo.AttendanceRecords(ClassGroupId, LessonDate);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ExamResults_StudentId' AND object_id = OBJECT_ID(N'dbo.ExamResults'))
+    CREATE INDEX IX_ExamResults_StudentId ON dbo.ExamResults(StudentId);
+GO
+database/02_views.sql
+USE [StudentCourseCenterDb];
+GO
+
+CREATE OR ALTER VIEW dbo.vw_StudentEnrollmentDetails
+AS
+SELECT
+    se.StudentEnrollmentId,
+    s.StudentId,
+    s.StudentNo,
+    s.FirstName,
+    s.LastName,
+    cg.ClassGroupId,
+    cg.GroupCode,
+    cg.GroupName,
+    c.CourseName,
+    t.FirstName + N' ' + t.LastName AS TeacherName,
+    at.TermName,
+    se.EnrollDate,
+    se.EnrollmentStatus
+FROM dbo.StudentEnrollments se
+INNER JOIN dbo.Students s ON s.StudentId = se.StudentId
+INNER JOIN dbo.ClassGroups cg ON cg.ClassGroupId = se.ClassGroupId
+INNER JOIN dbo.Courses c ON c.CourseId = cg.CourseId
+INNER JOIN dbo.Teachers t ON t.TeacherId = cg.TeacherId
+INNER JOIN dbo.AcademicTerms at ON at.AcademicTermId = cg.AcademicTermId;
+GO
+
+CREATE OR ALTER VIEW dbo.vw_TeacherSchedule
+AS
+SELECT
+    t.TeacherId,
+    t.TeacherNo,
+    t.FirstName,
+    t.LastName,
+    cg.ClassGroupId,
+    cg.GroupCode,
+    cg.GroupName,
+    c.CourseName,
+    ls.DayOfWeek,
+    ls.StartTime,
+    ls.EndTime,
+    ls.Room
+FROM dbo.ClassGroups cg
+INNER JOIN dbo.Teachers t ON t.TeacherId = cg.TeacherId
+INNER JOIN dbo.Courses c ON c.CourseId = cg.CourseId
+LEFT JOIN dbo.LessonSchedules ls ON ls.ClassGroupId = cg.ClassGroupId;
+GO
+
+CREATE OR ALTER VIEW dbo.vw_StudentExamResults
+AS
+SELECT
+    s.StudentId,
+    s.StudentNo,
+    s.FirstName,
+    s.LastName,
+    e.ExamId,
+    e.ExamName,
+    e.ExamDate,
+    e.TotalScore,
+    er.Score,
+    CAST((er.Score * 100.0) / NULLIF(e.TotalScore, 0) AS DECIMAL(5,2)) AS Percentage,
+    cg.GroupName,
+    c.CourseName
+FROM dbo.ExamResults er
+INNER JOIN dbo.Exams e ON e.ExamId = er.ExamId
+INNER JOIN dbo.Students s ON s.StudentId = er.StudentId
+INNER JOIN dbo.ClassGroups cg ON cg.ClassGroupId = e.ClassGroupId
+INNER JOIN dbo.Courses c ON c.CourseId = cg.CourseId;
+GO
+database/03_procedures.sql
+USE [StudentCourseCenterDb];
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_EnrollStudentToClassGroup
+    @StudentId INT,
+    @ClassGroupId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Students WHERE StudentId = @StudentId AND IsActive = 1)
+    BEGIN
+        THROW 50001, N'Student not found or inactive.', 1;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.ClassGroups WHERE ClassGroupId = @ClassGroupId AND IsActive = 1)
+    BEGIN
+        THROW 50002, N'Class group not found or inactive.', 1;
+    END
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM dbo.StudentEnrollments
+        WHERE StudentId = @StudentId
+          AND ClassGroupId = @ClassGroupId
+    )
+    BEGIN
+        THROW 50003, N'Student is already enrolled in this class group.', 1;
+    END
+
+    DECLARE @Capacity INT;
+    DECLARE @CurrentActiveCount INT;
+
+    SELECT @Capacity = Capacity
+    FROM dbo.ClassGroups
+    WHERE ClassGroupId = @ClassGroupId;
+
+    SELECT @CurrentActiveCount = COUNT(*)
+    FROM dbo.StudentEnrollments
+    WHERE ClassGroupId = @ClassGroupId
+      AND EnrollmentStatus = N'Active';
+
+    IF @CurrentActiveCount >= @Capacity
+    BEGIN
+        THROW 50004, N'Class group capacity exceeded.', 1;
+    END
+
+    INSERT INTO dbo.StudentEnrollments
+    (
+        StudentId,
+        ClassGroupId,
+        EnrollmentStatus
+    )
+    VALUES
+    (
+        @StudentId,
+        @ClassGroupId,
+        N'Active'
+    );
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_RecordAttendance
+    @ClassGroupId INT,
+    @StudentId INT,
+    @LessonDate DATE,
+    @AttendanceStatus NVARCHAR(20),
+    @Note NVARCHAR(300) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @AttendanceStatus NOT IN (N'Present', N'Absent', N'Late', N'Excused')
+    BEGIN
+        THROW 50005, N'Invalid attendance status.', 1;
+    END
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.StudentEnrollments
+        WHERE StudentId = @StudentId
+          AND ClassGroupId = @ClassGroupId
+          AND EnrollmentStatus = N'Active'
+    )
+    BEGIN
+        THROW 50006, N'Student is not actively enrolled in this class group.', 1;
+    END
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM dbo.AttendanceRecords
+        WHERE ClassGroupId = @ClassGroupId
+          AND StudentId = @StudentId
+          AND LessonDate = @LessonDate
+    )
+    BEGIN
+        UPDATE dbo.AttendanceRecords
+        SET AttendanceStatus = @AttendanceStatus,
+            Note = @Note
+        WHERE ClassGroupId = @ClassGroupId
+          AND StudentId = @StudentId
+          AND LessonDate = @LessonDate;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.AttendanceRecords
+        (
+            ClassGroupId,
+            StudentId,
+            LessonDate,
+            AttendanceStatus,
+            Note
+        )
+        VALUES
+        (
+            @ClassGroupId,
+            @StudentId,
+            @LessonDate,
+            @AttendanceStatus,
+            @Note
+        );
+    END
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_SaveExamResult
+    @ExamId INT,
+    @StudentId INT,
+    @Score DECIMAL(5,2),
+    @Note NVARCHAR(300) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TotalScore DECIMAL(5,2);
+
+    SELECT @TotalScore = TotalScore
+    FROM dbo.Exams
+    WHERE ExamId = @ExamId;
+
+    IF @TotalScore IS NULL
+    BEGIN
+        THROW 50007, N'Exam not found.', 1;
+    END
+
+    IF @Score < 0 OR @Score > @TotalScore
+    BEGIN
+        THROW 50008, N'Score cannot be less than 0 or greater than total score.', 1;
+    END
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM dbo.ExamResults
+        WHERE ExamId = @ExamId
+          AND StudentId = @StudentId
+    )
+    BEGIN
+        UPDATE dbo.ExamResults
+        SET Score = @Score,
+            Note = @Note
+        WHERE ExamId = @ExamId
+          AND StudentId = @StudentId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.ExamResults
+        (
+            ExamId,
+            StudentId,
+            Score,
+            Note
+        )
+        VALUES
+        (
+            @ExamId,
+            @StudentId,
+            @Score,
+            @Note
+        );
+    END
+END
+GO
+database/04_seed.sql
+USE [StudentCourseCenterDb];
+GO
+
+/* Institution */
+IF NOT EXISTS (SELECT 1 FROM dbo.Institutions WHERE Name = N'Basari Dershanesi')
+BEGIN
+    INSERT INTO dbo.Institutions (Name, Phone, Email, Address)
+    VALUES (N'Basari Dershanesi', N'0212 000 00 00', N'info@basari.com', N'Istanbul');
+END
+GO
+
+/* Academic Term */
+IF NOT EXISTS (SELECT 1 FROM dbo.AcademicTerms WHERE TermName = N'2025-2026')
+BEGIN
+    INSERT INTO dbo.AcademicTerms (InstitutionId, TermName, StartDate, EndDate)
+    VALUES (1, N'2025-2026', '2025-09-01', '2026-06-30');
+END
+GO
+
+/* Students */
+IF NOT EXISTS (SELECT 1 FROM dbo.Students WHERE StudentNo = N'STU001')
+BEGIN
+    INSERT INTO dbo.Students (InstitutionId, StudentNo, FirstName, LastName, GradeLevel, SchoolName, Phone)
+    VALUES 
+    (1, N'STU001', N'Ahmet', N'Yilmaz', 11, N'Ataturk Lisesi', N'05000000001'),
+    (1, N'STU002', N'Ayse', N'Kaya', 12, N'Cumhuriyet Lisesi', N'05000000002'),
+    (1, N'STU003', N'Mehmet', N'Can', 10, N'Anadolu Lisesi', N'05000000003');
+END
+GO
+
+/* Teachers */
+IF NOT EXISTS (SELECT 1 FROM dbo.Teachers WHERE TeacherNo = N'TCH001')
+BEGIN
+    INSERT INTO dbo.Teachers (InstitutionId, TeacherNo, FirstName, LastName, Phone)
+    VALUES
+    (1, N'TCH001', N'Elif', N'Demir', N'05000000101'),
+    (1, N'TCH002', N'Can', N'Arslan', N'05000000102');
+END
+GO
+
+/* Courses */
+IF NOT EXISTS (SELECT 1 FROM dbo.Courses WHERE CourseCode = N'MAT')
+BEGIN
+    INSERT INTO dbo.Courses (InstitutionId, CourseCode, CourseName)
+    VALUES
+    (1, N'MAT', N'Matematik'),
+    (1, N'FIZ', N'Fizik'),
+    (1, N'KIM', N'Kimya');
+END
+GO
+
+/* TeacherCourses */
+IF NOT EXISTS (SELECT 1 FROM dbo.TeacherCourses WHERE TeacherId = 1 AND CourseId = 1)
+BEGIN
+    INSERT INTO dbo.TeacherCourses (TeacherId, CourseId)
+    VALUES
+    (1, 1),
+    (2, 2),
+    (2, 3);
+END
+GO
+
+/* ClassGroups */
+IF NOT EXISTS (SELECT 1 FROM dbo.ClassGroups WHERE GroupCode = N'MAT-11-A')
+BEGIN
+    INSERT INTO dbo.ClassGroups
+    (
+        InstitutionId,
+        AcademicTermId,
+        CourseId,
+        TeacherId,
+        GroupCode,
+        GroupName,
+        Capacity,
+        Classroom
+    )
+    VALUES
+    (1, 1, 1, 1, N'MAT-11-A', N'11 Sinif Matematik A', 25, N'A1'),
+    (1, 1, 2, 2, N'FIZ-12-A', N'12 Sinif Fizik A', 20, N'B2');
+END
+GO
+
+/* Student Enrollments */
+IF NOT EXISTS (SELECT 1 FROM dbo.StudentEnrollments WHERE StudentId = 1 AND ClassGroupId = 1)
+BEGIN
+    INSERT INTO dbo.StudentEnrollments (StudentId, ClassGroupId, EnrollmentStatus)
+    VALUES
+    (1, 1, N'Active'),
+    (2, 1, N'Active'),
+    (2, 2, N'Active'),
+    (3, 1, N'Active');
+END
+GO
+
+/* Lesson Schedules */
+IF NOT EXISTS (SELECT 1 FROM dbo.LessonSchedules WHERE ClassGroupId = 1 AND DayOfWeek = 1)
+BEGIN
+    INSERT INTO dbo.LessonSchedules (ClassGroupId, DayOfWeek, StartTime, EndTime, Room)
+    VALUES
+    (1, 1, '09:00', '10:30', N'A1'),
+    (1, 3, '09:00', '10:30', N'A1'),
+    (2, 2, '11:00', '12:30', N'B2');
+END
+GO
+
+/* Exams */
+IF NOT EXISTS (SELECT 1 FROM dbo.Exams WHERE ExamName = N'Matematik Quiz 1')
+BEGIN
+    INSERT INTO dbo.Exams (ClassGroupId, ExamName, ExamDate, TotalScore)
+    VALUES
+    (1, N'Matematik Quiz 1', '2026-01-10', 100),
+    (2, N'Fizik Quiz 1', '2026-01-15', 100);
+END
+GO
+
+/* Exam Results */
+IF NOT EXISTS (SELECT 1 FROM dbo.ExamResults WHERE ExamId = 1 AND StudentId = 1)
+BEGIN
+    INSERT INTO dbo.ExamResults (ExamId, StudentId, Score, Note)
+    VALUES
+    (1, 1, 85, N'Good'),
+    (1, 2, 92, N'Very Good'),
+    (1, 3, 74, N'Needs improvement'),
+    (2, 2, 88, N'Stable');
+END
+GO
+database/99_smoke_test.sql
+USE [StudentCourseCenterDb];
+GO
+
+SELECT * FROM dbo.Institutions;
+SELECT * FROM dbo.AcademicTerms;
+SELECT * FROM dbo.Students;
+SELECT * FROM dbo.Teachers;
+SELECT * FROM dbo.Courses;
+SELECT * FROM dbo.ClassGroups;
+SELECT * FROM dbo.StudentEnrollments;
+SELECT * FROM dbo.LessonSchedules;
+SELECT * FROM dbo.AttendanceRecords;
+SELECT * FROM dbo.Exams;
+SELECT * FROM dbo.ExamResults;
+GO
+
+SELECT * FROM dbo.vw_StudentEnrollmentDetails;
+SELECT * FROM dbo.vw_TeacherSchedule;
+SELECT * FROM dbo.vw_StudentExamResults;
+GO
+
+EXEC dbo.usp_RecordAttendance
+    @ClassGroupId = 1,
+    @StudentId = 1,
+    @LessonDate = '2026-01-20',
+    @AttendanceStatus = N'Present',
+    @Note = N'On time';
+GO
+
+EXEC dbo.usp_SaveExamResult
+    @ExamId = 1,
+    @StudentId = 1,
+    @Score = 90,
+    @Note = N'Updated after review';
+GO
+
+SELECT * FROM dbo.AttendanceRecords;
+SELECT * FROM dbo.ExamResults;
+GO

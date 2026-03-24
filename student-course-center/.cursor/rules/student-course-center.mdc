@@ -1,0 +1,10 @@
+---
+description: Student Course Center — Python console + SQL Server
+globs: student-course-center/**/*
+---
+
+- Preserve SQL Server table/column names; do not rename English entities.
+- Use views for list screens; use `usp_EnrollStudentToClassGroup`, `usp_RecordAttendance`, `usp_SaveExamResult` for writes (not ad-hoc SQL for those flows).
+- Connection string env var: `STUDENT_COURSE_CENTER_CONNECTION_STRING`.
+- Layering: `domain`, `infrastructure`, `application`, `console` under `src/student_course_center/`.
+- Follow [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for phased work.
