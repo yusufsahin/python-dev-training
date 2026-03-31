@@ -1,0 +1,53 @@
+<section class="grid two-columns">
+    <section class="panel">
+        <h2>Add Student</h2>
+        <form method="post" action="/students/create" class="stack-form">
+            <label>Student Number<input name="student_number" required></label>
+            <label>First Name<input name="first_name" required></label>
+            <label>Last Name<input name="last_name" required></label>
+            <label>Birth Date<input type="date" name="birth_date" required></label>
+            <label>Department
+                <select name="department_id" required>
+                    <option value="">Select department</option>
+                    {{ department_options }}
+                </select>
+            </label>
+            <button type="submit">Create Student</button>
+        </form>
+    </section>
+    <section class="panel">
+        <h2>Update Student</h2>
+        <form method="post" action="/students/update" class="stack-form">
+            <label>Student ID<input type="number" name="student_id" required></label>
+            <label>Student Number<input name="student_number" required></label>
+            <label>First Name<input name="first_name" required></label>
+            <label>Last Name<input name="last_name" required></label>
+            <label>Birth Date<input type="date" name="birth_date" required></label>
+            <label>Department
+                <select name="department_id" required>
+                    <option value="">Select department</option>
+                    {{ department_options }}
+                </select>
+            </label>
+            <button type="submit">Update Student</button>
+        </form>
+    </section>
+</section>
+<section class="panel">
+    <h2>Students</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Student Number</th>
+                <th>Name</th>
+                <th>Birth Date</th>
+                <th>Department</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ student_rows }}
+        </tbody>
+    </table>
+</section>

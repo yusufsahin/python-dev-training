@@ -1,0 +1,32 @@
+<section class="grid two-columns">
+    <section class="panel">
+        <h2>Add Department</h2>
+        <form method="post" action="/departments/create" class="stack-form">
+            <label>Name<input name="name" required></label>
+            <button type="submit">Create Department</button>
+        </form>
+    </section>
+    <section class="panel">
+        <h2>Update Department</h2>
+        <form method="post" action="/departments/update" class="stack-form">
+            <label>Department ID<input type="number" name="department_id" required></label>
+            <label>New Name<input name="name" required></label>
+            <button type="submit">Update Department</button>
+        </form>
+    </section>
+</section>
+<section class="panel">
+    <h2>Departments</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ department_rows }}
+        </tbody>
+    </table>
+</section>

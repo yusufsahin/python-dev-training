@@ -1,0 +1,25 @@
+<section class="hero">
+    <div class="hero-card">
+        <h2>Overview</h2>
+        <p>Manage departments and students from a browser.</p>
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-label">Students</span>
+                <strong>{{ student_count }}</strong>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Departments</span>
+                <strong>{{ department_count }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="hero-card">
+        <h2>Setup</h2>
+        <form method="post" action="/setup/init" class="inline-form">
+            <button type="submit">Create Tables</button>
+        </form>
+        <form method="post" action="/setup/seed" class="inline-form">
+            <button type="submit">Seed Demo Data</button>
+        </form>
+    </div>
+</section>
