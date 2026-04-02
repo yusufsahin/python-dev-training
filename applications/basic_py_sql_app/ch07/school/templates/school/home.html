@@ -1,0 +1,32 @@
+{% extends "school/base.html" %}
+{% block title %}Home — School{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <h1 class="h3 ds-page-title mb-3">Overview</h1>
+        <p class="text-secondary mb-4">Quick counts for your school directory.</p>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <div class="card ds-card h-100">
+                    <div class="card-body">
+                        <p class="text-secondary small text-uppercase mb-1">Departments</p>
+                        <p class="display-6 fw-semibold text-primary mb-0">{{ department_count }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="card ds-card h-100">
+                    <div class="card-body">
+                        <p class="text-secondary small text-uppercase mb-1">Students</p>
+                        <p class="display-6 fw-semibold text-primary mb-0">{{ student_count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <a class="btn btn-primary" href="{{ url_for('school.department_list') }}">Manage departments</a>
+            <a class="btn btn-outline-primary" href="{{ url_for('school.student_list') }}">Manage students</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

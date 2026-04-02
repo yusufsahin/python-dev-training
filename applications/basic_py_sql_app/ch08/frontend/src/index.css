@@ -1,0 +1,38 @@
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+main.flex-grow-1 {
+  flex: 1;
+}
+
+.ds-page-title {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--bs-heading-color);
+}
+
+.ds-card {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.35);
+  border-color: var(--bs-border-color);
+}
+
+.table thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-secondary-color);
+}
+
+.toast-container {
+  z-index: 1090;
+}

@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: db_app01
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_app01"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8000"
+      DB_BACKEND: postgresql
+      POSTGRES_DSN: dbname=db_app01 user=postgres password=postgres host=db port=5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

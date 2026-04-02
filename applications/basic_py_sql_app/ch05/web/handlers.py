@@ -1,4 +1,3 @@
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -22,6 +21,8 @@ from controllers.student_controller import (
 )
 from dto.department_dto import DepartmentRequest
 from dto.student_dto import StudentRequest
+from web.api import dispatch_api, is_api_path
+from web.http_utils import db_error_message as _db_error_message, parse_birth_date
 from web.views import (
     dashboard_page,
     department_detail_page,
@@ -32,10 +33,6 @@ from web.views import (
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-
-def parse_birth_date(value: str):
-    return datetime.strptime(value, "%Y-%m-%d").date()
 
 
 def read_form_data(handler) -> dict[str, str]:
@@ -60,29 +57,29 @@ def parse_int(value: str, field_name: str) -> int:
 def safe_students() -> tuple[list, str]:
     try:
         return handle_list_students(), ""
-    except Exception:
-        return [], "Database is not ready yet. Use Create Tables first."
+    except Exception as exc:
+        return [], _db_error_message(exc)
 
 
 def safe_departments() -> tuple[list, str]:
     try:
         return handle_list_departments(), ""
-    except Exception:
-        return [], "Database is not ready yet. Use Create Tables first."
+    except Exception as exc:
+        return [], _db_error_message(exc)
 
 
 def safe_student(student_id: int):
     try:
         return handle_get_student(student_id), ""
-    except Exception:
-        return None, "Database is not ready yet. Use Create Tables first."
+    except Exception as exc:
+        return None, _db_error_message(exc)
 
 
 def safe_department(department_id: int):
     try:
         return handle_get_department(department_id), ""
-    except Exception:
-        return None, "Database is not ready yet. Use Create Tables first."
+    except Exception as exc:
+        return None, _db_error_message(exc)
 
 
 def build_student_request(form_data: dict[str, str]) -> StudentRequest:
@@ -106,7 +103,7 @@ def build_student_request(form_data: dict[str, str]) -> StudentRequest:
     try:
         is_valid_department = handle_is_valid_department(department_id)
     except Exception as error:
-        raise ValueError("Database is not ready yet. Use Create Tables first.") from error
+        raise ValueError(_db_error_message(error)) from error
 
     if not is_valid_department:
         raise ValueError("Invalid department ID.")
@@ -293,19 +290,37 @@ def handle_post_request(handler) -> None:
         if path.startswith("/setup"):
             target = "/"
         redirect(handler, redirect_url(target, str(error)))
-    except Exception:
+    except Exception as exc:
         target = "/students" if path.startswith("/students") else "/departments"
         if path.startswith("/setup"):
             target = "/"
-        redirect(handler, redirect_url(target, "Database is not ready yet. Use Create Tables first."))
+        redirect(handler, redirect_url(target, _db_error_message(exc)))
 
 
 class StudentAppHandler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        if is_api_path(urlparse(self.path).path):
+            dispatch_api(self, "OPTIONS")
+
     def do_GET(self):
-        handle_get_request(self)
+        if not dispatch_api(self, "GET"):
+            handle_get_request(self)
 
     def do_POST(self):
-        handle_post_request(self)
+        if not dispatch_api(self, "POST"):
+            handle_post_request(self)
+
+    def do_PUT(self):
+        if not dispatch_api(self, "PUT"):
+            self.send_response(405)
+            self.send_header("Allow", "GET, POST, HEAD")
+            self.end_headers()
+
+    def do_DELETE(self):
+        if not dispatch_api(self, "DELETE"):
+            self.send_response(405)
+            self.send_header("Allow", "GET, POST, HEAD")
+            self.end_headers()
 
     def log_message(self, format, *args):
         return

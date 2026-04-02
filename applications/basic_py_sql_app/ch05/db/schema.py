@@ -1,16 +1,23 @@
-from db.connection import get_connection
+from db.dialect import SqlDialect, get_dialect
+from db.config import load_db_context
+from ports import ConnectionFactory
 
 
-def create_table():
-    with get_connection() as conn:
+def create_table(
+    connect: ConnectionFactory | None = None, dialect: SqlDialect | None = None
+) -> None:
+    if connect is None or dialect is None:
+        ctx = load_db_context()
+        factory = connect or ctx.connect
+        d = dialect or get_dialect(ctx.backend)
+    else:
+        factory = connect
+        d = dialect
+
+    with factory() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'students'
-                ORDER BY ordinal_position;
-            """)
-            student_columns = [row[0] for row in cursor.fetchall()]
+            cursor.execute(d.students_column_list_sql())
+            student_columns = [str(row[0]).lower() for row in cursor.fetchall()]
             expected_columns = [
                 "id",
                 "student_number",
@@ -23,28 +30,7 @@ def create_table():
             if student_columns and student_columns != expected_columns:
                 cursor.execute("DROP TABLE IF EXISTS students;")
 
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS departments (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL UNIQUE
-                );
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS students (
-                    id SERIAL PRIMARY KEY,
-                    student_number VARCHAR(20) NOT NULL UNIQUE,
-                    first_name VARCHAR(50) NOT NULL,
-                    last_name VARCHAR(50) NOT NULL,
-                    birth_date DATE NOT NULL,
-                    department_id INT NOT NULL REFERENCES departments(id)
-                );
-            """)
-            cursor.execute("""
-                INSERT INTO departments (name)
-                VALUES
-                    ('Computer Science'),
-                    ('Mathematics'),
-                    ('Physics')
-                ON CONFLICT (name) DO NOTHING;
-            """)
+            cursor.execute(d.ddl_departments())
+            cursor.execute(d.ddl_students())
+            cursor.execute(d.bootstrap_departments_sql())
             conn.commit()

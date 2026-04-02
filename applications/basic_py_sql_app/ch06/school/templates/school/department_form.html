@@ -1,0 +1,20 @@
+{% extends "school/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>{{ title }}</h1>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-row">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+        {% endfor %}
+        {{ form.non_field_errors }}
+        <button type="submit" class="btn">Save</button>
+        <a href="{% url 'school:department_list' %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

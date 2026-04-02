@@ -1,34 +1,29 @@
-from db.connection import get_connection
+from db.config import load_db_context
+from db.dialect import MysqlDialect, SqlDialect, get_dialect
+from ports import ConnectionFactory
 
 
-def seed_data():
-    with get_connection() as conn:
+def seed_data(
+    connect: ConnectionFactory | None = None, dialect: SqlDialect | None = None
+) -> int:
+    if connect is None or dialect is None:
+        ctx = load_db_context()
+        factory = connect or ctx.connect
+        d = dialect or get_dialect(ctx.backend)
+    else:
+        factory = connect
+        d = dialect
+
+    with factory() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO departments (name)
-                VALUES
-                    ('Software Engineering'),
-                    ('Electrical Engineering')
-                ON CONFLICT (name) DO NOTHING;
-            """)
-
-            cur.execute("""
-                INSERT INTO students (
-                    student_number, first_name, last_name, birth_date, department_id
-                )
-                SELECT * FROM (
-                    VALUES
-                        ('2024001', 'Ahmet', 'Yilmaz', DATE '2003-05-14',
-                            (SELECT id FROM departments WHERE name = 'Computer Science')),
-                        ('2024002', 'Ayse', 'Demir', DATE '2002-11-03',
-                            (SELECT id FROM departments WHERE name = 'Mathematics')),
-                        ('2024003', 'Mehmet', 'Kaya', DATE '2004-01-22',
-                            (SELECT id FROM departments WHERE name = 'Physics')),
-                        ('2024004', 'Elif', 'Acar', DATE '2003-08-09',
-                            (SELECT id FROM departments WHERE name = 'Software Engineering'))
-                ) AS seed_students(student_number, first_name, last_name, birth_date, department_id)
-                ON CONFLICT (student_number) DO NOTHING;
-            """)
-            inserted_count = cur.rowcount
+            cur.execute(d.seed_extra_departments_sql())
+            cur.execute(d.seed_students_sql())
+            # MySQL: çok satırlı INSERT…SELECT sonrası driver rowcount güvenilmez olabiliyor
+            if isinstance(d, MysqlDialect):
+                cur.execute("SELECT ROW_COUNT()")
+                row = cur.fetchone()
+                inserted_count = int(row[0]) if row and row[0] is not None else 0
+            else:
+                inserted_count = cur.rowcount
             conn.commit()
             return inserted_count

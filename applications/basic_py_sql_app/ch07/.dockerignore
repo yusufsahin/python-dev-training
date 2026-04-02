@@ -1,0 +1,11 @@
+__pycache__
+*.py[cod]
+.git
+.venv
+venv
+*.md
+.pytest_cache
+.mypy_cache
+_mig.db
+test.db
+instance

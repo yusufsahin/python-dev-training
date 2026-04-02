@@ -1,33 +1,31 @@
+from typing import Literal
+
 from dto.department_dto import DepartmentRequest
-from repositories.department_repository import (
-    delete_department,
-    department_exists,
-    get_department_by_id,
-    insert_department,
-    list_departments,
-    update_department,
-)
+from ports import DepartmentRepository
 
 
-def get_departments():
-    return list_departments()
+class DepartmentService:
+    def __init__(self, repository: DepartmentRepository) -> None:
+        self._repository = repository
 
+    def get_departments(self):
+        return self._repository.list_departments()
 
-def get_department(department_id: int):
-    return get_department_by_id(department_id)
+    def get_department(self, department_id: int):
+        return self._repository.get_department_by_id(department_id)
 
+    def add_department(self, department_request: DepartmentRequest) -> bool:
+        return self._repository.insert_department(department_request.to_create())
 
-def add_department(department_request: DepartmentRequest) -> bool:
-    return insert_department(department_request.to_create())
+    def edit_department(
+        self, department_id: int, department_request: DepartmentRequest
+    ) -> Literal["updated", "not_found", "conflict"]:
+        return self._repository.update_department(department_id, department_request.to_update())
 
+    def remove_department(
+        self, department_id: int
+    ) -> Literal["deleted", "not_found", "in_use"]:
+        return self._repository.delete_department(department_id)
 
-def edit_department(department_id: int, department_request: DepartmentRequest) -> str:
-    return update_department(department_id, department_request.to_update())
-
-
-def remove_department(department_id: int) -> str:
-    return delete_department(department_id)
-
-
-def is_valid_department(department_id):
-    return department_exists(department_id)
+    def is_valid_department(self, department_id: int) -> bool:
+        return self._repository.department_exists(department_id)
