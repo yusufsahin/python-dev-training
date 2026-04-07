@@ -1,0 +1,180 @@
+{% extends "tasks/base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="h3 ds-page-title mb-0">Tasks</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTaskCreate">New task</button>
+</div>
+
+<div class="card ds-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th class="text-end pe-4" style="width: 11rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in tasks %}
+                    <tr>
+                        <td class="ps-4 text-secondary">{{ t.id }}</td>
+                        <td class="fw-medium">{{ t.title }}</td>
+                        <td><span class="badge text-bg-secondary">{{ status_display(t.status) }}</span></td>
+                        <td>{{ t.start_date or "—" }}</td>
+                        <td>{{ t.end_date or "—" }}</td>
+                        <td class="text-end pe-4">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                    data-action="task-edit"
+                                    data-id="{{ t.id }}"
+                                    data-title="{{ t.title|e }}"
+                                    data-status="{{ t.status }}"
+                                    data-start="{{ t.start_date.strftime('%Y-%m-%d') if t.start_date else '' }}"
+                                    data-end="{{ t.end_date.strftime('%Y-%m-%d') if t.end_date else '' }}">Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#modalTaskDelete"
+                                    data-action="task-delete"
+                                    data-id="{{ t.id }}"
+                                    data-title="{{ t.title|e }}">Delete</button>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-secondary py-5">No tasks yet.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTaskCreate" tabindex="-1" aria-labelledby="modalTaskCreateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form method="post" novalidate>
+                {{ create_form.hidden_tag() }}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTaskCreateLabel">New task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if create_form.errors %}
+                    {% for errs in create_form.errors.values() %}
+                        {% for err in errs %}<div class="alert alert-danger">{{ err }}</div>{% endfor %}
+                    {% endfor %}
+                    {% endif %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            {{ create_form.title.label(class="form-label") }}
+                            {{ create_form.title() }}
+                            {% for err in create_form.title.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ create_form.status.label(class="form-label") }}
+                            {{ create_form.status() }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ create_form.start_date.label(class="form-label") }}
+                            {{ create_form.start_date() }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ create_form.end_date.label(class="form-label") }}
+                            {{ create_form.end_date() }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTaskEdit" tabindex="-1" aria-labelledby="modalTaskEditLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form method="post" novalidate>
+                {{ edit_form.hidden_tag() }}
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="task_id" id="task_edit_pk" value="{{ edit_task_id|default('', true) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTaskEditLabel">Edit task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if edit_form.errors %}
+                    {% for errs in edit_form.errors.values() %}
+                        {% for err in errs %}<div class="alert alert-danger">{{ err }}</div>{% endfor %}
+                    {% endfor %}
+                    {% endif %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            {{ edit_form.title.label(class="form-label") }}
+                            {{ edit_form.title(id="task_edit-title") }}
+                            {% for err in edit_form.title.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ edit_form.status.label(class="form-label") }}
+                            {{ edit_form.status(id="task_edit-status") }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ edit_form.start_date.label(class="form-label") }}
+                            {{ edit_form.start_date(id="task_edit-start_date") }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ edit_form.end_date.label(class="form-label") }}
+                            {{ edit_form.end_date(id="task_edit-end_date") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTaskDelete" tabindex="-1" aria-labelledby="modalTaskDeleteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="task_id" id="delete_task_pk" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTaskDeleteLabel">Delete task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Delete <strong id="delete_task_label"></strong>? This cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.__TASK_LIST__ = {
+    showCreate: {{ 'true' if show_create_modal else 'false' }},
+    showEdit: {{ 'true' if show_edit_modal else 'false' }}
+};
+</script>
+<script src="{{ url_for('static', filename='tasks/app.js') }}"></script>
+{% endblock %}

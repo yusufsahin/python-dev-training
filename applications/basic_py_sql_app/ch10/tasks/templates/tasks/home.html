@@ -1,0 +1,10 @@
+{% extends "tasks/base.html" %}
+{% block title %}Home · Tasks{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="h2 ds-page-title mb-3">Task app (ch10)</h1>
+    <p class="text-secondary lead mb-4">Flask + <strong>MongoEngine</strong> + MongoDB — same UI as ch09; documents in collection <code>task_item</code>.</p>
+    <p class="mb-4"><span class="badge bg-primary fs-6">{{ task_count }} task(s)</span></p>
+    <a class="btn btn-lg btn-primary" href="{{ url_for('tasks.task_list') }}">Open tasks</a>
+</div>
+{% endblock %}
