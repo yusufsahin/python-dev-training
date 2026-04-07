@@ -1,0 +1,44 @@
+name: tasks-ch11
+
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongodata_ch11:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8050:8000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: tasks
+      SECRET_KEY: ch11-docker-change-me
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  mongodata_ch11:

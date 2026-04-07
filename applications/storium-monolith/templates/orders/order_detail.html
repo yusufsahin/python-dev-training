@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Sipariş #{{ order.id }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+  <h1>Sipariş #{{ order.id }}</h1>
+  <span class="badge bg-info fs-6">{{ order.status_display }}</span>
+</div>
+<p class="text-muted">Oluşturulma: {{ order.created_at }}</p>
+
+<h2 class="h5 mt-4">Ürünler</h2>
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Ürün</th>
+        <th>Birim</th>
+        <th>Adet</th>
+        <th>Ara toplam</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order.items %}
+        <tr>
+          <td>{{ item.product_name }}</td>
+          <td>₺{{ item.unit_price }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>₺{{ item.line_total }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="3">Genel toplam</th>
+        <th>₺{{ order.total_price }}</th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<h2 class="h5 mt-4">Teslimat</h2>
+<p>
+  {{ order.shipping_name }}<br>
+  {{ order.shipping_address }}<br>
+  {{ order.shipping_city }}<br>
+  {% if order.shipping_phone %}Tel: {{ order.shipping_phone }}{% endif %}
+</p>
+{% if order.notes %}
+  <p><strong>Not:</strong> {{ order.notes }}</p>
+{% endif %}
+<a href="{% url 'orders:order_list' %}" class="btn btn-outline-secondary">Geri</a>
+{% endblock %}

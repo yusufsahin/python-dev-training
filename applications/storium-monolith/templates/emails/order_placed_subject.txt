@@ -1,0 +1,1 @@
+Siparişiniz alındı — #{{ order.id }} | Storium

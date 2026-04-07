@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: storium_user
+      POSTGRES_PASSWORD: storium_password
+      POSTGRES_DB: storium_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - storium_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storium_user -d storium_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  storium_pgdata:

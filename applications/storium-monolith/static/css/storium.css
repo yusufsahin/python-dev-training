@@ -1,0 +1,23 @@
+:root {
+  --storium-primary: #2c3e50;
+  --storium-accent: #e74c3c;
+  --storium-light: #ecf0f1;
+}
+
+.product-card {
+ transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+ transform: translateY(-4px);
+ box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.price-display {
+ color: var(--storium-accent);
+ font-weight: 700;
+}
+
+.cart-badge {
+ font-size: 0.65rem;
+}

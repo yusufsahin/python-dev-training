@@ -1,0 +1,66 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{% url 'catalog:home' %}">
+      <i class="bi bi-shop"></i> Storium
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <form class="d-flex mx-auto" style="max-width: 400px;"
+            method="get" action="{% url 'catalog:product_search' %}">
+        <input class="form-control me-2" type="search" name="q"
+               placeholder="Ürün ara..." value="{{ request.GET.q|default:'' }}">
+        <button class="btn btn-outline-light" type="submit">
+          <i class="bi bi-search"></i>
+        </button>
+      </form>
+
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'cart:cart_detail' %}">
+            <i class="bi bi-cart3"></i> Sepet
+            {% if cart_item_count > 0 %}
+              <span class="badge bg-danger rounded-pill">{{ cart_item_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        {% if user.is_authenticated %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle"></i> {{ user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url 'orders:order_list' %}">
+                <i class="bi bi-bag-check"></i> Siparişlerim
+              </a></li>
+              {% if user.is_staff %}
+              <li><a class="dropdown-item" href="{% url 'admin:index' %}">
+                <i class="bi bi-gear"></i> Admin
+              </a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form method="post" action="{% url 'logout' %}">
+                  {% csrf_token %}
+                  <button class="dropdown-item text-danger" type="submit">
+                    <i class="bi bi-box-arrow-right"></i> Çıkış Yap
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'login' %}">
+              <i class="bi bi-person"></i> Giriş Yap
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Sipariş alındı{% endblock %}
+{% block content %}
+<div class="alert alert-success">
+  <h4 class="alert-heading">Teşekkürler!</h4>
+  <p>Siparişiniz <strong>#{{ order.id }}</strong> olarak kaydedildi.</p>
+</div>
+<p><strong>Durum:</strong> {{ order.status_display }}</p>
+<p><strong>Toplam:</strong> ₺{{ order.total_price }}</p>
+<p>
+  {{ order.shipping_name }}<br>
+  {{ order.shipping_address }}<br>
+  {{ order.shipping_city }}
+</p>
+<a href="{% url 'orders:order_list' %}" class="btn btn-outline-primary">Siparişlerim</a>
+<a href="{% url 'catalog:home' %}" class="btn btn-primary">Alışverişe devam</a>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Arama{% if query %}: {{ query }}{% endif %}{% endblock %}
+{% block content %}
+<h1>Arama</h1>
+<form method="get" action="{% url 'catalog:product_search' %}" class="mb-4">
+  <div class="input-group">
+    <input type="search" name="q" class="form-control" placeholder="En az 2 karakter" value="{{ query }}">
+    <button class="btn btn-primary" type="submit">Ara</button>
+  </div>
+</form>
+
+{% if query and query|length < 2 %}
+  <p class="text-muted">Aramak için en az 2 karakter girin.</p>
+{% elif data %}
+  {% if data.products %}
+    <p class="text-muted">{{ data.total_count }} sonuç</p>
+    <div class="row">
+      {% for p in data.products %}
+        {% include 'partials/_product_card.html' with product=p %}
+      {% endfor %}
+    </div>
+    {% include 'partials/_pagination.html' with data=data pagination_pages=pagination_pages %}
+  {% else %}
+    <p>Arama sonucu bulunamadı.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

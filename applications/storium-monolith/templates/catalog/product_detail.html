@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}{{ data.product.name }}{% endblock %}
+{% block content %}
+{% include 'partials/_breadcrumb.html' with breadcrumb=data.breadcrumb %}
+<div class="row">
+  <div class="col-md-5">
+    {% if data.product.image_url %}
+      <img src="{{ data.product.image_url }}" class="img-fluid rounded" alt="{{ data.product.name }}">
+    {% else %}
+      <div class="bg-light d-flex align-items-center justify-content-center rounded" style="min-height: 300px;">
+        <i class="bi bi-image text-muted" style="font-size: 4rem;"></i>
+      </div>
+    {% endif %}
+  </div>
+  <div class="col-md-7">
+    <h1>{{ data.product.name }}</h1>
+    <p class="display-6 text-primary">₺{{ data.product.price }}</p>
+    {% if data.product.is_in_stock %}
+      <span class="badge bg-success">Stokta Var</span>
+    {% else %}
+      <span class="badge bg-danger">Stokta Yok</span>
+    {% endif %}
+    <p class="mt-3">{{ data.product.description|linebreaks }}</p>
+    <form method="post" action="{% url 'cart:cart_add' %}">
+      {% csrf_token %}
+      <input type="hidden" name="product_id" value="{{ data.product.id }}">
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <div class="input-group mb-3" style="max-width: 220px;">
+        <input type="number" name="quantity" value="1" min="1"
+               max="{{ data.product.stock }}" class="form-control">
+        <button type="submit" class="btn btn-primary"
+                {% if not data.product.is_in_stock %}disabled{% endif %}>
+          Sepete Ekle
+        </button>
+      </div>
+    </form>
+    <p><a href="{% url 'catalog:category_detail' slug=data.product.category_slug %}">Kategoriye dön</a></p>
+  </div>
+</div>
+{% if data.related_products %}
+  <h2 class="h5 mt-5">İlgili ürünler</h2>
+  <div class="row">
+    {% for p in data.related_products %}
+      {% include 'partials/_product_card.html' with product=p %}
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

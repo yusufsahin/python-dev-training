@@ -1,0 +1,15 @@
+# Django Core
+Django>=5.0,<6.0
+Pillow>=10.0          # ImageField desteği için
+
+# Veritabanı (Production)
+psycopg2-binary>=2.9  # PostgreSQL sürücüsü
+
+# Environment
+python-decouple>=3.8  # .env okuma (veya django-environ)
+
+# Statik Dosya (Production)
+whitenoise>=6.6       # Statik dosyaları serve etmek için
+
+# Geliştirme Araçları (Opsiyonel)
+django-debug-toolbar>=4.0
