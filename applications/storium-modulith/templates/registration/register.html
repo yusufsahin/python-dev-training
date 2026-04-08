@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Kayıt ol{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <h1 class="h3 mb-3">Kayıt ol</h1>
+    <form method="post" class="card card-body">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.username.id_for_label }}">Kullanıcı adı</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="text-danger small">{{ form.username.errors }}</div>
+        {% endif %}
+        {% if form.username.help_text %}
+          <div class="form-text">{{ form.username.help_text }}</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.password1.id_for_label }}">Şifre</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}
+          <div class="text-danger small">{{ form.password1.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.password2.id_for_label }}">Şifre (tekrar)</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}
+          <div class="text-danger small">{{ form.password2.errors }}</div>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Kayıt ol</button>
+    </form>
+    <p class="mt-3 text-center text-muted small">
+      Zaten hesabınız var mı? <a href="{% url 'login' %}">Giriş yapın</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from django.urls import reverse
 
 from core.dtos.catalog_dtos import (
     BreadcrumbItemDTO,
+    CategoryNavNode,
     CategoryOutputDTO,
     CategoryWithProductsDTO,
     ProductDetailDTO,
@@ -78,6 +79,23 @@ class CatalogService:
     def get_featured_products(self, count: int = 8) -> list[ProductOutputDTO]:
         qs = self.product_repo.get_active_products().filter(stock__gt=0)[:count]
         return [self._product_to_dto(p) for p in qs]
+
+    def get_category_nav_tree(self) -> list[CategoryNavNode]:
+        roots = self.category_repo.get_root_categories()
+        result: list[CategoryNavNode] = []
+        for root in roots:
+            children = self.category_repo.get_active_children(root.id)
+            result.append(
+                CategoryNavNode(
+                    name=root.name,
+                    slug=root.slug,
+                    children=tuple(
+                        CategoryNavNode(name=c.name, slug=c.slug, children=())
+                        for c in children
+                    ),
+                ),
+            )
+        return result
 
     def _category_to_dto(self, category) -> CategoryOutputDTO:
         return CategoryOutputDTO(

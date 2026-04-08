@@ -13,6 +13,7 @@ source .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                # SECRET_KEY ve DB_* değerlerini düzenle
 python manage.py migrate
+python manage.py seed_catalog          # örnek kategori/ürün (isteğe bağlı)
 python manage.py createsuperuser
 python manage.py runserver
 ```

@@ -36,6 +36,15 @@ class BreadcrumbItemDTO:
 
 
 @dataclass(frozen=True)
+class CategoryNavNode:
+    """Sol menü / footer: kök + bir seviye alt kategori (slug ile link)."""
+
+    name: str
+    slug: str
+    children: tuple["CategoryNavNode", ...] = ()
+
+
+@dataclass(frozen=True)
 class CategoryWithProductsDTO:
     category: CategoryOutputDTO
     products: list[ProductOutputDTO]

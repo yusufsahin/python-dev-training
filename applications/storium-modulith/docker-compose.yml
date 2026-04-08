@@ -1,0 +1,76 @@
+# Yerel tam yığın: docker compose up --build
+# Varsayılan: http://localhost:8001  |  PG (host): localhost:5433  |  Redis: 6379
+# Port değiştirmek: .env içinde DOCKER_WEB_PORT=8000 DOCKER_DB_PORT=5432
+# Süper kullanıcı: docker compose run --rm web python manage.py createsuperuser
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: storium_user
+      POSTGRES_PASSWORD: storium_password
+      POSTGRES_DB: storium_db
+    ports:
+      - "${DOCKER_DB_PORT:-5433}:5432"
+    volumes:
+      - storium_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storium_user -d storium_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: >
+      gunicorn --bind 0.0.0.0:8000 --workers 2
+      --access-logfile - --error-logfile - --capture-output
+      --timeout 120
+      storium.wsgi:application
+    ports:
+      - "${DOCKER_WEB_PORT:-8001}:8000"
+    environment:
+      DJANGO_ENV: development
+      SECRET_KEY: ${SECRET_KEY:-docker-local-dev-change-me}
+      DJANGO_SIMPLE_STATIC: "true"
+      DB_NAME: storium_db
+      DB_USER: storium_user
+      DB_PASSWORD: storium_password
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+      DJANGO_RUN_SEED: "true"
+      DJANGO_SEED_DEMO_USER: "true"
+    volumes:
+      - storium_media:/app/media
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  storium_pgdata:
+  storium_media:

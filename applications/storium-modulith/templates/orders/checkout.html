@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Ödeme / teslimat{% endblock %}
+{% block content %}
+<h1>Siparişi tamamla</h1>
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card card-body">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Ad Soyad</label>
+        <input type="text" name="shipping_name" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Adres</label>
+        <textarea name="shipping_address" class="form-control" rows="3" required></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Şehir</label>
+        <input type="text" name="shipping_city" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Telefon</label>
+        <input type="text" name="shipping_phone" class="form-control">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Not</label>
+        <textarea name="notes" class="form-control" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Siparişi onayla</button>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">Sipariş özeti</div>
+      <ul class="list-group list-group-flush">
+        {% for item in cart.items %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ item.name }} × {{ item.quantity }}</span>
+            <span>₺{{ item.line_total }}</span>
+          </li>
+        {% endfor %}
+        <li class="list-group-item fw-bold d-flex justify-content-between">
+          <span>Toplam</span>
+          <span>₺{{ cart.total_price }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

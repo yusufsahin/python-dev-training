@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}{{ data.category.name }}{% endblock %}
+{% block content %}
+{% include 'partials/_breadcrumb.html' with breadcrumb=data.breadcrumb %}
+<h1>{{ data.category.name }} <small class="text-muted">{{ data.total_count }} ürün</small></h1>
+<div class="row">
+  {% for p in data.products %}
+    {% include 'partials/_product_card.html' with product=p %}
+  {% empty %}
+    <p class="text-muted">Bu kategoride ürün yok.</p>
+  {% endfor %}
+</div>
+{% include 'partials/_pagination.html' with data=data pagination_pages=pagination_pages %}
+{% endblock %}

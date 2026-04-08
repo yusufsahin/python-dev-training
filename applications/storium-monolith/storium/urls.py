@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
+from storium.views import RegisterView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(
@@ -11,6 +13,7 @@ urlpatterns = [
         auth_views.LoginView.as_view(template_name="registration/login.html"),
         name="login",
     ),
+    path("kayit/", RegisterView.as_view(), name="register"),
     path("cikis/", auth_views.LogoutView.as_view(), name="logout"),
     path("", include("apps.catalog.urls", namespace="catalog")),
     path("", include("apps.cart.urls", namespace="cart")),

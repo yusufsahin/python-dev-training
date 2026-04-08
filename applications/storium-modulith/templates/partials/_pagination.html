@@ -1,0 +1,27 @@
+{% if data.total_pages > 1 %}
+  <nav aria-label="Sayfalama" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if data.page > 1 %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ data.page|add:'-1' }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+      {% endif %}
+
+      {% for num in pagination_pages %}
+        <li class="page-item {% if num == data.page %}active{% endif %}">
+          <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+        </li>
+      {% endfor %}
+
+      {% if data.page < data.total_pages %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ data.page|add:'1' }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}

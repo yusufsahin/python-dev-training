@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.jsonl
+*.csv
+posta_kodlari.*
+_page.html
+_chunk.js
+_next_props.json
+_sample.jsonl

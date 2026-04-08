@@ -262,37 +262,31 @@ CSRF_COOKIE_SECURE = True
 
 ---
 
-## 5. Yerel PostgreSQL (Docker Compose, isteğe bağlı)
+## 5. Docker ile yerel çalıştırma (Django + PostgreSQL)
 
-Proje köküne `docker-compose.yml` ekleyebilirsiniz:
-
-```yaml
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: storium_user
-      POSTGRES_PASSWORD: storium_password
-      POSTGRES_DB: storium_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - storium_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storium_user -d storium_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  storium_pgdata:
-```
+Proje kökünde `Dockerfile`, `docker-entrypoint.sh` ve `docker-compose.yml` bulunur: **web** (Gunicorn) + **db** (Postgres 16). Konteyner içinde `DB_HOST=db` kullanılır.
 
 ```bash
-docker compose up -d
-# Ardından .env içindeki DB_* değerleri compose ile aynı olmalı
-python manage.py migrate
+cd storium-monolith
+# İsteğe bağlı: proje kökünde .env içinde SECRET_KEY=... (compose ${SECRET_KEY} ile okur)
+docker compose up --build
 ```
+
+- Uygulama: **http://localhost:8000**
+- İlk kurulumda süper kullanıcı: `docker compose run --rm -it web python manage.py createsuperuser`
+- Yalnızca veritabanı (host’tan `runserver`): `docker compose up -d db` — `.env` içinde `DB_HOST=localhost` kullanın.
+
+`docker-entrypoint.sh`: Postgres hazır olana kadar bekler, `migrate` ve `collectstatic` çalıştırır; yüklenen görseller `storium_media` volume’unda kalır.
+
+### Bağlantı reddedildi (`ERR_CONNECTION_REFUSED`)
+
+Bu hata, tarayıcının bağlandığı adreste **hiçbir süreç dinlemiyor** demektir (çoğunlukla `http://localhost:8000`).
+
+1. **Docker ile çalıştırıyorsanız:** Windows’ta **Docker Desktop**’ı açın (sistem tepsisinde Docker çalışır olmalı). Proje kökünde: `docker compose up --build`. Ardından `docker compose ps` — `web` **running** ve **healthy** (veya en azından Up) olmalı. Hata varsa: `docker compose logs web` (Gunicorn / migrate / collectstatic çıktısı).
+2. **Yerel `runserver` kullanıyorsanız:** PostgreSQL ayakta olmalı (ör. `docker compose up -d db` veya yerel kurulum), `.env` dolu olmalı; sonra `python manage.py runserver` — terminal kapanırsa sunucu da durur.
+3. Port çakışması: Başka bir uygulama 8000 kullanıyorsa `python manage.py runserver 8080` veya compose’ta `"8080:8000"` kullanın.
+
+**Windows:** `docker-entrypoint.sh` satır sonları CRLF ise konteyner hemen çıkabilir; güncel `Dockerfile` içinde `sed` ile düzeltilir — imajı yeniden derleyin: `docker compose build --no-cache web`.
 
 ## 6. .env.example
 
@@ -411,7 +405,19 @@ reset-db:
 
 ---
 
-## 10. Örnek Veri (Admin Panel ile)
+## 10. Örnek Veri
+
+### Komut ile seed (önerilir)
+
+```bash
+python manage.py seed_catalog
+# İsteğe bağlı test kullanıcısı (kullanıcı: demo, şifre: storium-demo-2024):
+python manage.py seed_catalog --with-demo-user
+```
+
+Kök kategoriler: Elektronik, Ev ve Yaşam, Kitap; alt kategori ve 8 örnek ürün. Tekrar çalıştırıldığında `get_or_create` ile güncellenir.
+
+### Admin panel ile manuel
 
 ```
 1. python manage.py createsuperuser
@@ -420,6 +426,8 @@ reset-db:
 4. Catalog > Products → Ürün ekle, kategori seç, görsel yükle
 5. http://localhost:8000/ → Anasayfayı görüntüle
 ```
+
+Docker: `docker compose run --rm web python manage.py seed_catalog`
 
 ---
 

@@ -1,0 +1,20 @@
+{% comment %}Kategori ağacı: context_processor catalog_nav + catalog_nav_active_slug{% endcomment %}
+<nav class="nav flex-column" aria-label="Kategoriler">
+  {% for node in catalog_nav %}
+    <a
+      class="nav-link py-2 px-2 rounded {% if catalog_nav_active_slug == node.slug %}active fw-bold{% endif %}"
+      href="{% url 'catalog:category_detail' slug=node.slug %}"
+    >{{ node.name }}</a>
+    {% for child in node.children %}
+      <a
+        class="nav-link py-1 ps-4 small rounded {% if catalog_nav_active_slug == child.slug %}active fw-bold{% endif %}"
+        href="{% url 'catalog:category_detail' slug=child.slug %}"
+      >{{ child.name }}</a>
+    {% endfor %}
+    {% if not forloop.last %}
+      <hr class="my-2 opacity-25">
+    {% endif %}
+  {% empty %}
+    <p class="text-muted small mb-0">Henüz kategori yok.</p>
+  {% endfor %}
+</nav>

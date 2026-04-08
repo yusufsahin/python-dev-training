@@ -44,6 +44,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.cart.context_processors.cart_context",
+                "apps.catalog.context_processors.catalog_nav",
             ],
         },
     },
@@ -66,7 +67,11 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Docker / CI: manifest bazen eksik hash ile kırılır; DJANGO_SIMPLE_STATIC=true → Manifest kullanılmaz
+if config("DJANGO_SIMPLE_STATIC", default=False, cast=bool):
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+else:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

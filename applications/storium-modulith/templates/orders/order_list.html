@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Siparişlerim{% endblock %}
+{% block content %}
+<h1>Siparişlerim</h1>
+{% if not orders %}
+  <p class="text-muted">Henüz sipariş vermediniz.</p>
+{% else %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Tarih</th>
+          <th>Toplam</th>
+          <th>Durum</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+          <tr>
+            <td>#{{ o.id }}</td>
+            <td>{{ o.created_at }}</td>
+            <td>₺{{ o.total_price }}</td>
+            <td>
+              {% if o.status == 'pending' %}
+                <span class="badge bg-warning text-dark">{{ o.status_display }}</span>
+              {% elif o.status == 'confirmed' %}
+                <span class="badge bg-info">{{ o.status_display }}</span>
+              {% elif o.status == 'shipped' %}
+                <span class="badge bg-primary">{{ o.status_display }}</span>
+              {% elif o.status == 'delivered' %}
+                <span class="badge bg-success">{{ o.status_display }}</span>
+              {% elif o.status == 'cancelled' %}
+                <span class="badge bg-danger">{{ o.status_display }}</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ o.status_display }}</span>
+              {% endif %}
+            </td>
+            <td><a href="{% url 'orders:order_detail' order_id=o.id %}">Detay</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

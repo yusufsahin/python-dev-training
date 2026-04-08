@@ -1,0 +1,86 @@
+# Tam yığın: UI (Next.js) http://localhost:3000  |  API http://localhost:8001
+# PostgreSQL host: localhost:5433  |  Redis: 6379
+#
+# Yerel geliştirme: API uvicorn + frontend: cd frontend && npm run dev
+#   frontend/.env.local → NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: storium_user
+      POSTGRES_PASSWORD: storium_password
+      POSTGRES_DB: storium_db
+    ports:
+      - "${DOCKER_DB_PORT:-5433}:5432"
+    volumes:
+      - storium_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storium_user -d storium_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+    ports:
+      - "${DOCKER_API_PORT:-8001}:8000"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-docker-local-dev-change-me}
+      DATABASE_URL: postgresql+psycopg2://storium_user:storium_password@db:5432/storium_db
+      DB_NAME: storium_db
+      DB_USER: storium_user
+      DB_PASSWORD: storium_password
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+      RUN_SEED: "true"
+      SEED_DEMO_USER: "true"
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8001,http://127.0.0.1:8001"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:${DOCKER_API_PORT:-8001}
+    ports:
+      - "${DOCKER_UI_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  storium_pgdata:

@@ -1,0 +1,62 @@
+# Django + PostgreSQL testleri (applications/storium-monolith)
+name: Storium monolith CI
+
+on:
+  push:
+    paths:
+      - "applications/storium-monolith/**"
+      - ".github/workflows/storium-monolith-ci.yml"
+  pull_request:
+    paths:
+      - "applications/storium-monolith/**"
+      - ".github/workflows/storium-monolith-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: applications/storium-monolith
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: storium_user
+          POSTGRES_PASSWORD: storium_password
+          POSTGRES_DB: storium_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U storium_user -d storium_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_ENV: development
+      SECRET_KEY: ci-test-secret-not-for-production
+      DB_NAME: storium_db
+      DB_USER: storium_user
+      DB_PASSWORD: storium_password
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: applications/storium-monolith/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Migrate
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        run: python manage.py test --verbosity=2

@@ -1,0 +1,72 @@
+# Üretim / sunucu (PostgreSQL + Redis + Gunicorn).
+#
+# Ortam değişkenleri: .env.production (şablona .env.production.example bakın).
+# Compose, YAML içindeki ${DB_*} için bu dosyayı okumalıdır:
+#
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# Süper kullanıcı:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm web python manage.py createsuperuser
+# Örnek katalog:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm web python manage.py seed_catalog
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - storium_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    env_file:
+      - .env.production
+    environment:
+      DJANGO_ENV: production
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+    volumes:
+      - storium_media_prod:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+volumes:
+  storium_pgdata_prod:
+  storium_media_prod:

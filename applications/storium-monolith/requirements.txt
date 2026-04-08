@@ -11,5 +11,8 @@ python-decouple>=3.8  # .env okuma (veya django-environ)
 # Statik Dosya (Production)
 whitenoise>=6.6       # Statik dosyaları serve etmek için
 
+# WSGI (Docker / production)
+gunicorn>=22.0
+
 # Geliştirme Araçları (Opsiyonel)
 django-debug-toolbar>=4.0

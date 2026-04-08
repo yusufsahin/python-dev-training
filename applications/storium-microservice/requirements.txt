@@ -1,0 +1,24 @@
+# API
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+
+# Veri
+sqlalchemy>=2.0,<3
+psycopg2-binary>=2.9
+alembic>=1.13,<2
+
+# Doğrulama / ayar
+pydantic>=2,<3
+pydantic-settings>=2,<3
+email-validator>=2,<3
+
+# Auth
+python-jose[cryptography]>=3.3,<4
+passlib[bcrypt]>=1.7,<2
+
+# Önbellek / sepet
+redis>=5.0,<6
+
+# Ortam
+python-multipart>=0.0.9
+python-decouple>=3.8

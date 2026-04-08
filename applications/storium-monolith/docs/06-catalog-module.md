@@ -35,15 +35,11 @@ path('', include('apps.catalog.urls', namespace='catalog')),
 
 ### Ortak Service Fabrikası
 
-Her view'da tekrar yazılmaması için bir helper:
+`apps/catalog/service_provider.py` içinde `get_catalog_service()` — view'lar ve `catalog_nav` context processor aynı örneği kullanır (repository wiring tek yerde).
 
-```python
-def _make_catalog_service() -> CatalogService:
-    return CatalogService(
-        category_repo=DjangoCategoryRepository(),
-        product_repo=DjangoProductRepository(),
-    )
-```
+### Context processor (sol menü / footer)
+
+`apps/catalog/context_processors.catalog_nav`, `storium/settings/base.py` içinde kayıtlıdır. `CatalogService.get_category_nav_tree()` ile kök + bir seviye alt kategorileri `CategoryNavNode` DTO listesi olarak şablona verir (`catalog_nav`). `/kategori/<slug>/` yolundan `catalog_nav_active_slug` üretilir; ürün detayında `ProductDetailView` aynı anahtarı ürünün `category_slug` değeriyle günceller (sidebar’da aktif kategori vurgusu).
 
 ### HomeView
 
@@ -52,7 +48,7 @@ class HomeView(View):
     template_name = 'catalog/home.html'
 
     def get(self, request):
-        service = _make_catalog_service()
+        service = get_catalog_service()
         context = {
             'root_categories': service.get_root_categories(),
             'featured_products': service.get_featured_products(count=8),
@@ -68,7 +64,7 @@ class CategoryProductListView(View):
 
     def get(self, request, slug):
         page = int(request.GET.get('page', 1))
-        service = _make_catalog_service()
+        service = get_catalog_service()
         try:
             data = service.get_category_with_products(slug, page=page)
         except CategoryNotFoundException:
@@ -83,12 +79,15 @@ class ProductDetailView(View):
     template_name = 'catalog/product_detail.html'
 
     def get(self, request, slug):
-        service = _make_catalog_service()
+        service = get_catalog_service()
         try:
             data = service.get_product_detail(slug)
         except ProductNotFoundException:
             raise Http404
-        return render(request, self.template_name, {'data': data})
+        return render(request, self.template_name, {
+            'data': data,
+            'catalog_nav_active_slug': data.product.category_slug,
+        })
 ```
 
 ### ProductSearchView
@@ -101,7 +100,7 @@ class ProductSearchView(View):
         query = request.GET.get('q', '').strip()
         data = None
         if len(query) >= 2:     # En az 2 karakter aranmalı
-            service = _make_catalog_service()
+            service = get_catalog_service()
             data = service.search_products(query, page=int(request.GET.get('page', 1)))
         return render(request, self.template_name, {'data': data, 'query': query})
 ```
