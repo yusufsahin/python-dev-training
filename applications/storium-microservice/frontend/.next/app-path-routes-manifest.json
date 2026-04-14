@@ -1,11 +1,11 @@
 {
   "/_not-found/page": "/_not-found",
-  "/cart/page": "/cart",
-  "/category/[slug]/page": "/category/[slug]",
   "/orders/page": "/orders",
-  "/product/[slug]/page": "/product/[slug]",
-  "/login/page": "/login",
-  "/register/page": "/register",
+  "/category/[slug]/page": "/category/[slug]",
   "/page": "/",
-  "/checkout/page": "/checkout"
+  "/register/page": "/register",
+  "/checkout/page": "/checkout",
+  "/login/page": "/login",
+  "/product/[slug]/page": "/product/[slug]",
+  "/cart/page": "/cart"
 }

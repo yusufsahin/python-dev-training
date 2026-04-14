@@ -10,8 +10,10 @@ if ($LASTEXITCODE -ne 0) {
 
 $apiPort = if ($env:DOCKER_API_PORT) { $env:DOCKER_API_PORT } else { "8001" }
 $uiPort = if ($env:DOCKER_UI_PORT) { $env:DOCKER_UI_PORT } else { "3000" }
+$gwPort = if ($env:DOCKER_GATEWAY_WEB_PORT) { $env:DOCKER_GATEWAY_WEB_PORT } else { "9080" }
 $apiBase = "http://127.0.0.1:$apiPort"
 $uiBase = "http://127.0.0.1:$uiPort"
+$gwBase = "http://127.0.0.1:$gwPort"
 
 Write-Host "docker compose build..."
 docker compose build
@@ -55,5 +57,23 @@ if (-not $uiOk) {
     exit 1
 }
 
-Write-Host "OK: API $apiBase/api/health  |  UI $uiBase"
+$deadline3 = (Get-Date).AddSeconds(60)
+$gwOk = $false
+while ((Get-Date) -lt $deadline3 -and -not $gwOk) {
+    try {
+        $r3 = Invoke-WebRequest -Uri "$gwBase/api/health" -UseBasicParsing -TimeoutSec 5
+        if ($r3.StatusCode -eq 200) { $gwOk = $true }
+    } catch {
+        Start-Sleep -Seconds 2
+    }
+}
+
+if (-not $gwOk) {
+    Write-Host "Traefik gateway üzerinden /api/health yanıt vermedi. Son loglar:"
+    docker compose logs --tail 40 traefik
+    docker compose logs --tail 40 api
+    exit 1
+}
+
+Write-Host "OK: API $apiBase/api/health  |  Gateway $gwBase/api/health  |  UI $uiBase"
 docker compose ps

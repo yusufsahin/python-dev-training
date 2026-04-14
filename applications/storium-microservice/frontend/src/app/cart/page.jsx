@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { productImageSrc } from "@/lib/productImage";
 import { useAuth } from "@/context/AuthContext";
 import { useCartId } from "@/context/CartIdContext";
 import { useCartUi } from "@/context/CartUiContext";
@@ -60,22 +62,32 @@ export default function CartPage() {
         </p>
       ) : (
         <>
-          <ul style={{ listStyle: "none", padding: 0 }}>
+          <ul className="cart-lines">
             {cart.items.map((i) => (
-              <li key={i.product_id} className="card" style={{ marginBottom: "0.75rem" }}>
-                <strong>{i.name}</strong> — {i.price} ₺ × {i.quantity} = {i.line_total} ₺
-                <div
-                  style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
-                >
-                  <button type="button" onClick={() => setQty(i.product_id, i.quantity - 1)}>
-                    −
-                  </button>
-                  <button type="button" onClick={() => setQty(i.product_id, i.quantity + 1)}>
-                    +
-                  </button>
-                  <button type="button" onClick={() => remove(i.product_id)}>
-                    Kaldır
-                  </button>
+              <li key={i.product_id} className="cart-line card">
+                <Image
+                  className="cart-line__thumb"
+                  src={productImageSrc(i)}
+                  alt={i.name}
+                  width={88}
+                  height={88}
+                />
+                <div className="cart-line__main">
+                  <strong>{i.name}</strong>
+                  <p className="cart-line__prices">
+                    {i.price} ₺ × {i.quantity} = <strong>{i.line_total} ₺</strong>
+                  </p>
+                  <div className="cart-line__actions">
+                    <button type="button" onClick={() => setQty(i.product_id, i.quantity - 1)}>
+                      −
+                    </button>
+                    <button type="button" onClick={() => setQty(i.product_id, i.quantity + 1)}>
+                      +
+                    </button>
+                    <button type="button" onClick={() => remove(i.product_id)}>
+                      Kaldır
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}

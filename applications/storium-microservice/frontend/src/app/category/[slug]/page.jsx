@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProductCard } from "@/components/ProductCard";
 import { api } from "@/lib/api";
 
 export default function CategoryPage() {
@@ -40,15 +41,10 @@ export default function CategoryPage() {
           </span>
         ))}
       </nav>
-      <h1>{data.category.name}</h1>
+      <h1 className="page-title">{data.category.name}</h1>
       <div className="product-grid">
         {data.products.map((p) => (
-          <div key={p.id} className="card">
-            <Link href={`/product/${p.slug}`}>
-              <strong>{p.name}</strong>
-            </Link>
-            <p>{p.price} ₺</p>
-          </div>
+          <ProductCard key={p.id} product={p} />
         ))}
       </div>
       <p>

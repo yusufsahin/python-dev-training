@@ -53,11 +53,19 @@ docs/             # Mimari ve kurulum
 | [docs/16-migration-roadmap.md](docs/16-migration-roadmap.md) | Geçiş fazları ve DoD |
 | [docs/17-deployment-compose-and-k8s.md](docs/17-deployment-compose-and-k8s.md) | Compose ve K8s özeti |
 | [docs/18-api-contracts-testing-ops.md](docs/18-api-contracts-testing-ops.md) | Sözleşme, test, SLO |
+| [docs/19-violation-analysis.md](docs/19-violation-analysis.md) | Monolit / microservis ihlal analizi |
+| [docs/20-phase0-1-infra-gateway.md](docs/20-phase0-1-infra-gateway.md) | Faz 0–1: kontrat, smoke, Traefik |
+| [docs/21-phase2-catalog-service.md](docs/21-phase2-catalog-service.md) | Faz 2: Catalog servisi |
+| [docs/22-phase3-cart-orders.md](docs/22-phase3-cart-orders.md) | Faz 3: Cart ve Orders |
+| [docs/23-phase4-identity-notifications.md](docs/23-phase4-identity-notifications.md) | Faz 4: Identity ve bildirimler |
+| [docs/24-phase5-observability.md](docs/24-phase5-observability.md) | Faz 5: gözlemlenebilirlik |
 | [docs/adr/README.md](docs/adr/README.md) | Mimari karar kayıtları (ADR) |
+
+Smoke testler: `pip install -r requirements-dev.txt` ve `pytest tests/smoke -v` (veya `make test-smoke`). OpenAPI dondurma: `python scripts/export_openapi.py` veya `make openapi`.
 
 ## Mimari ilkeler
 
-- **Router**: HTTP ve doğrulama; iş mantığı yalnızca `services/` içinde.
+- **Router**: HTTP ve doğrulama; iş mantığı yalnızca `app/services/` içinde (gelecekte `services/<bounded>/`).
 - **Repository**: SQLAlchemy sorguları; servisler repo fonksiyonlarını kullanır.
 - **Şemalar**: `schemas/` (Pydantic) API sözleşmesi ile uyumlu.
 

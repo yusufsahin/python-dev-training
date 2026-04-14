@@ -1,0 +1,19 @@
+# Referans statik ayar (docker-compose içindeki Traefik `command` ile eşdeğer).
+# Bakınız: docs/20-phase0-1-infra-gateway.md
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: storium_net
+
+log:
+  level: INFO
+
+accessLog: {}

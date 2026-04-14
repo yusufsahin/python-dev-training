@@ -1,13 +1,14 @@
-# Tam yığın: UI (Next.js) http://localhost:3000  |  API http://localhost:8001
-# PostgreSQL host: localhost:5433  |  Redis: 6379
+# UI: http://localhost:3000 | Gateway: http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080}
+# İlk kurulumda çoklu DB için Postgres volume'u sıfırlamanız gerekebilir: docker compose down -v
 #
-# Yerel geliştirme: API uvicorn + frontend: cd frontend && npm run dev
-#   frontend/.env.local → NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+# Yerel (Traefik olmadan): her servisi ayrı portta çalıştırın veya gateway kullanın.
 services:
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    networks:
+      - storium_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -19,38 +20,67 @@ services:
     environment:
       POSTGRES_USER: storium_user
       POSTGRES_PASSWORD: storium_password
-      POSTGRES_DB: storium_db
+      POSTGRES_DB: catalog_db
     ports:
       - "${DOCKER_DB_PORT:-5433}:5432"
+    networks:
+      - storium_net
     volumes:
       - storium_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U storium_user -d storium_db"]
+      test: ["CMD-SHELL", "pg_isready -U storium_user -d catalog_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  api:
-    build: .
-    command: >
-      uvicorn app.main:app
-      --host 0.0.0.0
-      --port 8000
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
     ports:
-      - "${DOCKER_API_PORT:-8001}:8000"
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_HTTP_PORT:-15672}:15672"
+    networks:
+      - storium_net
     environment:
-      SECRET_KEY: ${SECRET_KEY:-docker-local-dev-change-me}
-      DATABASE_URL: postgresql+psycopg2://storium_user:storium_password@db:5432/storium_db
-      DB_NAME: storium_db
-      DB_USER: storium_user
-      DB_PASSWORD: storium_password
-      DB_HOST: db
-      DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
-      RUN_SEED: "true"
-      SEED_DEMO_USER: "true"
-      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8001,http://127.0.0.1:8001"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-storium}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-storium_pass}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - storium_rabbitmq_data:/var/lib/rabbitmq
+
+  traefik:
+    # v3.0 Docker provider API 1.24 kullanır; Docker Engine 29+ MinAPI 1.44 → rotalar oluşmaz, 404 + sahte CORS hatası
+    image: traefik:v3.6
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=storium_net"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "${DOCKER_GATEWAY_WEB_PORT:-9080}:80"
+      - "${DOCKER_TRAEFIK_UI_PORT:-8080}:8080"
+    networks:
+      - storium_net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
+
+  catalog:
+    build: ./services/catalog
+    networks:
+      - storium_net
+    environment:
+      DATABASE_URL: postgresql+psycopg2://storium_user:storium_password@db:5432/catalog_db
+      REDIS_URL: redis://redis:6379/2
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me-internal-token}
+      RUN_SEED: "true"
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080},http://127.0.0.1:${DOCKER_GATEWAY_WEB_PORT:-9080},http://localhost:8001,http://127.0.0.1:8001"
     depends_on:
       db:
         condition: service_healthy
@@ -68,19 +98,168 @@ services:
       timeout: 10s
       retries: 5
       start_period: 90s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.catalog-svc.loadbalancer.server.port=8000"
+      - "traefik.http.routers.storium-catalog.rule=PathPrefix(`/api/catalog`)"
+      - "traefik.http.routers.storium-catalog.entrypoints=web"
+      - "traefik.http.routers.storium-catalog.priority=20"
+      - "traefik.http.routers.storium-catalog.service=catalog-svc"
+      - "traefik.http.routers.storium-health.rule=Path(`/api/health`)"
+      - "traefik.http.routers.storium-health.entrypoints=web"
+      - "traefik.http.routers.storium-health.priority=30"
+      - "traefik.http.routers.storium-health.service=catalog-svc"
+
+  identity:
+    build: ./services/identity
+    networks:
+      - storium_net
+    environment:
+      DATABASE_URL: postgresql+psycopg2://storium_user:storium_password@db:5432/identity_db
+      SECRET_KEY: ${SECRET_KEY:-docker-local-dev-change-me}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me-internal-token}
+      SEED_DEMO_USER: "true"
+      RUN_SEED: "true"
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080},http://127.0.0.1:${DOCKER_GATEWAY_WEB_PORT:-9080},http://localhost:8001,http://127.0.0.1:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storium-identity.rule=PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.storium-identity.entrypoints=web"
+      - "traefik.http.routers.storium-identity.priority=20"
+      - "traefik.http.routers.storium-identity.service=identity-svc"
+      - "traefik.http.services.identity-svc.loadbalancer.server.port=8000"
+
+  cart:
+    build: ./services/cart
+    networks:
+      - storium_net
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      CATALOG_SERVICE_URL: http://catalog:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me-internal-token}
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080},http://127.0.0.1:${DOCKER_GATEWAY_WEB_PORT:-9080},http://localhost:8001,http://127.0.0.1:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storium-cart.rule=PathPrefix(`/api/cart`)"
+      - "traefik.http.routers.storium-cart.entrypoints=web"
+      - "traefik.http.routers.storium-cart.priority=20"
+      - "traefik.http.routers.storium-cart.service=cart-svc"
+      - "traefik.http.services.cart-svc.loadbalancer.server.port=8000"
+
+  orders:
+    build: ./services/orders
+    networks:
+      - storium_net
+    environment:
+      DATABASE_URL: postgresql+psycopg2://storium_user:storium_password@db:5432/orders_db
+      SECRET_KEY: ${SECRET_KEY:-docker-local-dev-change-me}
+      CATALOG_SERVICE_URL: http://catalog:8000
+      CART_SERVICE_URL: http://cart:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me-internal-token}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-storium}:${RABBITMQ_PASS:-storium_pass}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: storium.events
+      RABBITMQ_ROUTING_KEY: order.created
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080},http://127.0.0.1:${DOCKER_GATEWAY_WEB_PORT:-9080},http://localhost:8001,http://127.0.0.1:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+      cart:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storium-orders.rule=PathPrefix(`/api/orders`)"
+      - "traefik.http.routers.storium-orders.entrypoints=web"
+      - "traefik.http.routers.storium-orders.priority=20"
+      - "traefik.http.routers.storium-orders.service=orders-svc"
+      - "traefik.http.services.orders-svc.loadbalancer.server.port=8000"
+
+  notifications:
+    build: ./services/notifications
+    networks:
+      - storium_net
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-storium}:${RABBITMQ_PASS:-storium_pass}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: storium.events
+      NOTIFICATIONS_QUEUE: storium.notifications
+      RABBITMQ_ORDER_ROUTING_KEY: order.created
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
   ui:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE: http://localhost:${DOCKER_API_PORT:-8001}
+        NEXT_PUBLIC_API_BASE: http://localhost:${DOCKER_GATEWAY_WEB_PORT:-9080}
     ports:
       - "${DOCKER_UI_PORT:-3000}:3000"
+    networks:
+      - storium_net
     depends_on:
-      api:
+      catalog:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      cart:
+        condition: service_healthy
+      orders:
         condition: service_healthy
     restart: unless-stopped
 
+networks:
+  storium_net:
+    name: storium_net
+
 volumes:
   storium_pgdata:
+  storium_rabbitmq_data:

@@ -13,7 +13,7 @@
 - `DATABASE_URL` — `postgresql+psycopg2://kullanıcı:parola@host:5432/veritabanı`
 - `REDIS_URL` — örn. `redis://localhost:6379/1`
 - `SECRET_KEY` — JWT imzası (üretimde güçlü rastgele)
-- `CORS_ORIGINS` — virgülle ayrılmış liste (Next.js: `http://localhost:3000`)
+- `CORS_ORIGINS` — virgülle ayrılmış liste (Next.js: `http://localhost:3000`; Docker’da Traefik gateway için `http://localhost:9080` dahil edin)
 
 ## Yerel: backend
 
@@ -39,15 +39,32 @@ npm install
 npm run dev
 ```
 
-`frontend/.env.local.example` dosyasından kopyalayın: `NEXT_PUBLIC_API_BASE` tarayıcıdan API taban URL’si (yerelde genelde `http://127.0.0.1:8000`).
+`frontend/.env.local.example` dosyasından kopyalayın: `NEXT_PUBLIC_API_BASE` tarayıcıdan API taban URL’si (yerelde genelde `http://127.0.0.1:8000`; Docker + Traefik için `http://localhost:9080`).
 
-## Docker (API + Next.js ayrı konteynerler)
+## Docker (API + Next.js + Traefik + RabbitMQ)
 
 ```powershell
 docker compose up --build
 ```
 
-Varsayılan: UI `http://localhost:3000`, API `http://localhost:8001` (`NEXT_PUBLIC_API_BASE` build arg ile UI imajında).
+- UI: `http://localhost:3000`
+- API (doğrudan): `http://localhost:8001`
+- **API Gateway (Traefik):** `http://localhost:9080` — UI imajı varsayılan olarak `NEXT_PUBLIC_API_BASE=http://localhost:9080` ile buraya istek atar
+- Traefik paneli: `http://localhost:8080/dashboard/`
+- RabbitMQ yönetim: `http://localhost:15672` (varsayılan kullanıcı/parola: `storium` / `storium_pass`)
+
+## Smoke testleri (isteğe bağlı)
+
+PostgreSQL ve Redis ayaktayken (`.env` içinde `DATABASE_URL` ve `REDIS_URL`):
+
+```powershell
+pip install -r requirements-dev.txt
+pytest tests/smoke -v
+```
+
+Yalnızca uygulama sağlığı (DB gerekmez): `pytest tests/smoke/test_health.py -v`
+
+OpenAPI şemasını dondurmak: `python scripts/export_openapi.py` → `infra/contracts/openapi.json`
 
 Demo giriş (seed açıksa): kullanıcı `demo`, parola `storium-demo-2024`.
 

@@ -15,6 +15,7 @@ email-validator>=2,<3
 # Auth
 python-jose[cryptography]>=3.3,<4
 passlib[bcrypt]>=1.7,<2
+bcrypt>=4.0.1,<4.1
 
 # Önbellek / sepet
 redis>=5.0,<6

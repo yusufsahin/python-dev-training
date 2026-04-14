@@ -1,0 +1,33 @@
+# Paylaşılan altyapı (RabbitMQ + Redis) — isteğe bağlı ayrı çalıştırma.
+#   docker compose -f infra/shared/docker-compose.infra.yml up -d
+#
+# Ana geliştirme yığını: kök docker-compose.yml (db + redis + rabbitmq + traefik + api + ui).
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_HTTP_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-storium}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-storium_pass}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - storium_rabbitmq_data:/var/lib/rabbitmq
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${INFRA_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  storium_rabbitmq_data:

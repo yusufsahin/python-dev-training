@@ -6,9 +6,9 @@ Bu belge [11-setup.md](11-setup.md) yerel kurulumunu tamamlar; üretim kalıplar
 
 ### Geliştirme (`docker-compose.yml`)
 
-- Servisler: **db** (PostgreSQL), **redis**, **api** (FastAPI), **ui** (Next.js standalone).
-- Varsayılan portlar: UI **3000**, API **8001** (host), DB **5433** (host mapping, `.env` ile değişir).
-- UI imajı build arg: **`NEXT_PUBLIC_API_BASE`** — tarayıcıdan API’ye giden kök URL (Docker Desktop’ta genelde `http://localhost:8001`).
+- Servisler: **db** (PostgreSQL), **redis**, **rabbitmq**, **traefik**, **api** (FastAPI), **ui** (Next.js standalone).
+- Varsayılan portlar: UI **3000**, API doğrudan **8001**, Traefik (gateway) **9080**, Traefik dashboard **8080**, RabbitMQ yönetim **15672**, DB **5433** (host mapping, `.env` ile değişir).
+- UI imajı build arg: **`NEXT_PUBLIC_API_BASE`** — tarayıcıdan kök URL; gateway kullanımında genelde `http://localhost:9080` (doğrudan API için `http://localhost:8001`).
 - **Sırlar**: `.env` veya Compose `secrets`; repoda düz metin yok.
 
 ### Üretim (`docker-compose.prod.yml`)

@@ -1,4 +1,4 @@
-.PHONY: run migrate test seed docker-up docker-down docker-logs docker-ps
+.PHONY: run migrate test test-smoke seed docker-up docker-down docker-logs docker-ps openapi
 
 run:
 	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -11,6 +11,12 @@ revision:
 
 test:
 	python -m compileall -q app
+
+test-smoke:
+	pytest tests/smoke -v
+
+openapi:
+	python scripts/export_openapi.py
 
 seed:
 	python -m app.seed
@@ -25,7 +31,7 @@ docker-down:
 	docker compose down
 
 docker-logs:
-	docker compose logs -f api ui
+	docker compose logs -f api ui traefik
 
 docker-ps:
 	docker compose ps

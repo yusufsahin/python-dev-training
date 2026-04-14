@@ -1,9 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProductCard } from "@/components/ProductCard";
 import { api } from "@/lib/api";
+import { productImageSrc } from "@/lib/productImage";
 import { useCartId } from "@/context/CartIdContext";
 import { useCartUi } from "@/context/CartUiContext";
 
@@ -52,33 +55,53 @@ export default function ProductPage() {
   if (!data) return <p>Yükleniyor…</p>;
   const p = data.product;
 
+  const imgSrc = productImageSrc(p);
+
   return (
-    <div>
-      <nav style={{ marginBottom: "1rem" }}>
+    <div className="product-detail">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         {data.breadcrumb?.map((b, i) => (
           <span key={b.slug}>
-            {i > 0 ? " / " : ""}
+            {i > 0 ? <span className="breadcrumb__sep"> / </span> : null}
             <Link href={`/category/${b.slug}`}>{b.name}</Link>
           </span>
         ))}
       </nav>
-      <h1>{p.name}</h1>
-      <p>{p.description}</p>
-      <p>
-        <strong>{p.price} ₺</strong> — Stok: {p.stock}
-      </p>
-      <button type="button" className="primary" onClick={addToCart} disabled={!p.is_in_stock || !cartId}>
-        Sepete ekle
-      </button>
-      {msg ? <p>{msg}</p> : null}
+
+      <div className="product-detail__grid">
+        <div className="product-detail__media">
+          <Image
+            className="product-detail__img"
+            src={imgSrc}
+            alt={p.name}
+            width={800}
+            height={600}
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
+          />
+        </div>
+        <div className="product-detail__info">
+          <h1 className="page-title product-detail__name">{p.name}</h1>
+          <p className="product-detail__desc">{p.description}</p>
+          <p className="product-detail__buy-row">
+            <span className="product-detail__price">{p.price} ₺</span>
+            <span className={p.is_in_stock ? "product-detail__stock" : "product-detail__stock is-out"}>
+              {p.is_in_stock ? `Stok: ${p.stock}` : "Stokta yok"}
+            </span>
+          </p>
+          <button type="button" className="primary product-detail__cta" onClick={addToCart} disabled={!p.is_in_stock || !cartId}>
+            Sepete ekle
+          </button>
+          {msg ? <p className="product-detail__msg">{msg}</p> : null}
+        </div>
+      </div>
+
       {data.related_products?.length ? (
-        <section style={{ marginTop: "2rem" }}>
-          <h2>Benzer ürünler</h2>
+        <section className="related-section">
+          <h2 className="section-heading">Benzer ürünler</h2>
           <div className="product-grid">
             {data.related_products.map((rp) => (
-              <div key={rp.id} className="card">
-                <Link href={`/product/${rp.slug}`}>{rp.name}</Link>
-              </div>
+              <ProductCard key={rp.id} product={rp} />
             ))}
           </div>
         </section>
