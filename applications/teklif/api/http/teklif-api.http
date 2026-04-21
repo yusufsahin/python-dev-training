@@ -1,0 +1,90 @@
+### Teklif API — REST Client (VS Code / IntelliJ)
+### Sunucu ayağa kalkınca @baseUrl değerini güncelleyin.
+
+@baseUrl = http://localhost:3000
+@json = Content-Type: application/json
+
+### Sağlık (örnek — backend eklendiğinde)
+GET {{baseUrl}}/health
+
+### Cariler — liste (json-server: `npm run start` in `api/`)
+GET {{baseUrl}}/cariler
+Accept: application/json
+
+### Cari — oluştur
+POST {{baseUrl}}/cariler
+{{json}}
+
+{
+  "unvan": "API Müşteri A.Ş.",
+  "vergiNo": "1234567890",
+  "eposta": "info@apimusteri.com",
+  "telefon": "+90 212 555 00 00"
+}
+
+### Cari — tek kayıt
+@id = 00000000-0000-0000-0000-000000000001
+GET {{baseUrl}}/cariler/{{id}}
+
+### Cari — güncelle
+PATCH {{baseUrl}}/cariler/{{id}}
+{{json}}
+
+{
+  "unvan": "API Müşteri A.Ş. (Güncel)",
+  "vergiNo": "1234567890",
+  "eposta": "yeni@apimusteri.com",
+  "telefon": "+90 212 555 00 01"
+}
+
+### Cari — sil
+DELETE {{baseUrl}}/cariler/{{id}}
+
+### Ürün / hizmet kartları — liste
+GET {{baseUrl}}/urunler
+Accept: application/json
+
+### Ürün / hizmet — oluştur
+POST {{baseUrl}}/urunler
+{{json}}
+
+{
+  "tur": "URUN",
+  "ad": "Örnek ürün",
+  "sku": "SKU-001",
+  "barkod": "",
+  "birim": "Adet",
+  "kdvOrani": 20,
+  "satisFiyati": 199.9,
+  "alisFiyati": 120,
+  "dovizKodu": "TRY",
+  "kategori": "Genel",
+  "fiyatListesiAdi": "Standart",
+  "aktif": true
+}
+
+### Ürün / hizmet — tek kayıt
+@urunId = 00000000-0000-0000-0000-000000000001
+GET {{baseUrl}}/urunler/{{urunId}}
+
+### Ürün / hizmet — güncelle
+PATCH {{baseUrl}}/urunler/{{urunId}}
+{{json}}
+
+{
+  "tur": "URUN",
+  "ad": "Örnek ürün (Güncel)",
+  "sku": "SKU-001",
+  "barkod": "8680000000001",
+  "birim": "Adet",
+  "kdvOrani": 10,
+  "satisFiyati": 179.9,
+  "alisFiyati": 110,
+  "dovizKodu": "TRY",
+  "kategori": "Genel",
+  "fiyatListesiAdi": "Standart",
+  "aktif": true
+}
+
+### Ürün / hizmet — sil
+DELETE {{baseUrl}}/urunler/{{urunId}}

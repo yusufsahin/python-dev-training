@@ -1,0 +1,10 @@
+{
+  "name": "teklif-json-server",
+  "private": true,
+  "scripts": {
+    "start": "json-server --watch db.json --port 3000"
+  },
+  "devDependencies": {
+    "json-server": "0.17.4"
+  }
+}
