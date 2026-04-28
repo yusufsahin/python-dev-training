@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useListUrunlerQuery } from '@/store/api/baseApi'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 import { replaceModal } from '@/store/slices/modalSlice'
 import { useAppDispatch } from '@/store/hooks'
 
@@ -34,7 +35,8 @@ const tl = new Intl.NumberFormat('tr-TR', {
 
 export function UrunListPage() {
   const dispatch = useAppDispatch()
-  const { data: rows = [], isFetching, isError, refetch } = useListUrunlerQuery()
+  const { data: rows = [], isFetching, isError, refetch, error } = useListUrunlerQuery()
+  const errorMessage = getErrorMessage(error, 'Ürün/hizmet listesi yüklenemedi.')
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -58,7 +60,7 @@ export function UrunListPage() {
         <Card>
           <CardHeader>
             <CardTitle>Yüklenemedi</CardTitle>
-            <CardDescription>Mock API hata verdi.</CardDescription>
+            <CardDescription>{errorMessage}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="secondary" onClick={() => void refetch()}>

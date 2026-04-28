@@ -1,9 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { CariDto } from '@/features/cari/types'
+import type { TeklifCreateInput, TeklifDto, TeklifDurum } from '@/features/teklif/types'
 import type { UrunKartDto } from '@/features/urun/types'
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
-  ?? 'http://localhost:3000'
+  ?? 'http://localhost:8000'
 
 export const baseApi = createApi({
   reducerPath: 'api',
@@ -14,7 +15,7 @@ export const baseApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['Cari', 'UrunKart'],
+  tagTypes: ['Cari', 'UrunKart', 'Teklif'],
   endpoints: (build) => ({
     listCariler: build.query<CariDto[], void>({
       query: () => ({ url: 'cariler' }),
@@ -29,7 +30,7 @@ export const baseApi = createApi({
       query: (body) => ({
         url: 'cariler',
         method: 'POST',
-        body: { ...body, id: crypto.randomUUID() },
+        body,
       }),
       invalidatesTags: ['Cari'],
     }),
@@ -65,7 +66,7 @@ export const baseApi = createApi({
       query: (body) => ({
         url: 'urunler',
         method: 'POST',
-        body: { ...body, id: crypto.randomUUID() },
+        body,
       }),
       invalidatesTags: ['UrunKart'],
     }),
@@ -85,6 +86,32 @@ export const baseApi = createApi({
       transformResponse: () => ({ ok: true } as const),
       invalidatesTags: (_r, _e, id) => [{ type: 'UrunKart', id }, 'UrunKart'],
     }),
+
+    listTeklifler: build.query<TeklifDto[], void>({
+      query: () => ({ url: 'teklifler' }),
+      providesTags: (r) =>
+        r ? [...r.map(({ id }) => ({ type: 'Teklif' as const, id })), 'Teklif'] : ['Teklif'],
+    }),
+    getTeklif: build.query<TeklifDto, string>({
+      query: (id) => ({ url: `teklifler/${id}` }),
+      providesTags: (_r, _e, id) => [{ type: 'Teklif', id }],
+    }),
+    createTeklif: build.mutation<TeklifDto, TeklifCreateInput>({
+      query: (body) => ({
+        url: 'teklifler',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Teklif'],
+    }),
+    updateTeklifDurum: build.mutation<TeklifDto, { id: string; durum: TeklifDurum }>({
+      query: ({ id, durum }) => ({
+        url: `teklifler/${id}/durum`,
+        method: 'PATCH',
+        body: { durum },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Teklif', id }, 'Teklif'],
+    }),
   }),
 })
 
@@ -99,4 +126,8 @@ export const {
   useCreateUrunMutation,
   useUpdateUrunMutation,
   useDeleteUrunMutation,
+  useListTekliflerQuery,
+  useGetTeklifQuery,
+  useCreateTeklifMutation,
+  useUpdateTeklifDurumMutation,
 } = baseApi

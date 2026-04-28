@@ -1,17 +1,18 @@
 import { lazy, Suspense, useState } from 'react'
-import { LayoutGrid, Package, Palette, Users } from 'lucide-react'
+import { FileText, LayoutGrid, Package, Palette, Users } from 'lucide-react'
 import { ModalManager } from '@/components/modals/ModalManager'
 import { PageSpinner } from '@/components/PageSpinner'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CariListPage } from '@/features/cari/pages/CariListPage'
+import { TeklifListPage } from '@/features/teklif/pages/TeklifListPage'
 import { UrunListPage } from '@/features/urun/pages/UrunListPage'
 
 const DesignSystemPage = lazy(() => import('@/features/design-system/DesignSystemPage'))
 
 export default function App() {
   const [mainTab, setMainTab] = useState<'app' | 'design'>('app')
-  const [appSection, setAppSection] = useState<'cari' | 'urun'>('cari')
+  const [appSection, setAppSection] = useState<'cari' | 'urun' | 'teklif'>('cari')
 
   return (
     <>
@@ -55,9 +56,20 @@ export default function App() {
                 <Package className="size-4 shrink-0" />
                 Ürün / hizmet
               </Button>
+              <Button
+                size="sm"
+                variant={appSection === 'teklif' ? 'secondary' : 'ghost'}
+                className="gap-2"
+                onClick={() => setAppSection('teklif')}
+              >
+                <FileText className="size-4 shrink-0" />
+                Teklifler
+              </Button>
             </div>
           </div>
-          {appSection === 'cari' ? <CariListPage /> : <UrunListPage />}
+          {appSection === 'cari' ? <CariListPage /> : null}
+          {appSection === 'urun' ? <UrunListPage /> : null}
+          {appSection === 'teklif' ? <TeklifListPage /> : null}
         </TabsContent>
         <TabsContent value="design" className="mt-0 flex-1 outline-none" forceMount>
           {mainTab === 'design' ? (

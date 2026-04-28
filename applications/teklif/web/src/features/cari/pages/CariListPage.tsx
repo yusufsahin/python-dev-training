@@ -23,12 +23,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useListCarilerQuery } from '@/store/api/baseApi'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 import { replaceModal } from '@/store/slices/modalSlice'
 import { useAppDispatch } from '@/store/hooks'
 
 export function CariListPage() {
   const dispatch = useAppDispatch()
-  const { data: rows = [], isFetching, isError, refetch } = useListCarilerQuery()
+  const { data: rows = [], isFetching, isError, refetch, error } = useListCarilerQuery()
+  const errorMessage = getErrorMessage(error, 'Cariler yüklenemedi. Tekrar deneyin.')
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -52,7 +54,7 @@ export function CariListPage() {
         <Card>
           <CardHeader>
             <CardTitle>Yüklenemedi</CardTitle>
-            <CardDescription>Mock API hata verdi. Tekrar deneyin.</CardDescription>
+            <CardDescription>{errorMessage}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="secondary" onClick={() => void refetch()}>

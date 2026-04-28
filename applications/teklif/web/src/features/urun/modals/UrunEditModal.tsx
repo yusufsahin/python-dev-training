@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
@@ -7,6 +8,7 @@ import { ModalWrapper } from '@/components/modals/ModalWrapper'
 import { UrunFormFields } from '@/features/urun/components/UrunFormFields'
 import { urunFormSchema, type UrunFormValues } from '@/features/urun/schemas/urunFormSchema'
 import { useGetUrunQuery, useUpdateUrunMutation } from '@/store/api/baseApi'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 
 type Props = {
   open: boolean
@@ -17,6 +19,7 @@ type Props = {
 export function UrunEditModal({ open, urunId, onClose }: Props) {
   const { data, isFetching } = useGetUrunQuery(urunId, { skip: !open })
   const [updateUrun, { isLoading }] = useUpdateUrunMutation()
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const form = useForm<UrunFormValues>({
     resolver: zodResolver(urunFormSchema),
     defaultValues: {
@@ -55,12 +58,17 @@ export function UrunEditModal({ open, urunId, onClose }: Props) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!data) return
-    await updateUrun({
-      id: data.id,
-      ...values,
-      barkod: values.barkod.trim(),
-    }).unwrap()
-    onClose()
+    try {
+      setSubmitError(null)
+      await updateUrun({
+        id: data.id,
+        ...values,
+        barkod: values.barkod.trim(),
+      }).unwrap()
+      onClose()
+    } catch (e) {
+      setSubmitError(getErrorMessage(e, 'Ürün/hizmet güncellenemedi.'))
+    }
   })
 
   return (
@@ -88,6 +96,7 @@ export function UrunEditModal({ open, urunId, onClose }: Props) {
       ) : (
         <Form {...form}>
           <form id="urun-edit-form" className="space-y-4" onSubmit={onSubmit}>
+            {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
             <UrunFormFields form={form} />
           </form>
         </Form>

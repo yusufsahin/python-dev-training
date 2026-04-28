@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useDeleteCariMutation } from '@/store/api/baseApi'
 import {
   AlertDialog,
@@ -9,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 
 type Props = {
   open: boolean
@@ -20,6 +22,7 @@ type Props = {
 /** Silme onayı: tüm kırılımlarda `AlertDialog` (Radix) ile tutarlı UX. */
 export function CariDeleteModal({ open, cariId, label, onClose }: Props) {
   const [deleteCari, { isLoading }] = useDeleteCariMutation()
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   return (
     <AlertDialog
@@ -37,14 +40,20 @@ export function CariDeleteModal({ open, cariId, label, onClose }: Props) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
+          {submitError ? <p className="w-full text-sm text-destructive">{submitError}</p> : null}
           <AlertDialogCancel disabled={isLoading}>Vazgeç</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isLoading}
             onClick={async (e) => {
               e.preventDefault()
-              await deleteCari(cariId).unwrap()
-              onClose()
+              try {
+                setSubmitError(null)
+                await deleteCari(cariId).unwrap()
+                onClose()
+              } catch (error) {
+                setSubmitError(getErrorMessage(error, 'Cari silinemedi.'))
+              }
             }}
           >
             {isLoading ? 'Siliniyor…' : 'Evet, sil'}

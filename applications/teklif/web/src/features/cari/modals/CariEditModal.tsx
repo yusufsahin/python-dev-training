@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
@@ -10,6 +11,7 @@ import {
   type CariFormValues,
 } from '@/features/cari/schemas/cariFormSchema'
 import { useGetCariQuery, useUpdateCariMutation } from '@/store/api/baseApi'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 
 type Props = {
   open: boolean
@@ -20,6 +22,7 @@ type Props = {
 export function CariEditModal({ open, cariId, onClose }: Props) {
   const { data, isFetching } = useGetCariQuery(cariId, { skip: !open })
   const [updateCari, { isLoading }] = useUpdateCariMutation()
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const form = useForm<CariFormValues>({
     resolver: zodResolver(cariFormSchema),
     defaultValues: {
@@ -43,8 +46,13 @@ export function CariEditModal({ open, cariId, onClose }: Props) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!data) return
-    await updateCari({ ...data, ...values }).unwrap()
-    onClose()
+    try {
+      setSubmitError(null)
+      await updateCari({ ...data, ...values }).unwrap()
+      onClose()
+    } catch (e) {
+      setSubmitError(getErrorMessage(e, 'Cari güncellenemedi.'))
+    }
   })
 
   return (
@@ -71,6 +79,7 @@ export function CariEditModal({ open, cariId, onClose }: Props) {
       ) : (
         <Form {...form}>
           <form id="cari-edit-form" className="space-y-4" onSubmit={onSubmit}>
+            {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
             <CariFormFields form={form} />
           </form>
         </Form>

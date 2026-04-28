@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useDeleteUrunMutation } from '@/store/api/baseApi'
+import { getErrorMessage } from '@/store/api/getErrorMessage'
 
 type Props = {
   open: boolean
@@ -19,6 +21,7 @@ type Props = {
 
 export function UrunDeleteModal({ open, urunId, label, onClose }: Props) {
   const [deleteUrun, { isLoading }] = useDeleteUrunMutation()
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   return (
     <AlertDialog
@@ -36,14 +39,20 @@ export function UrunDeleteModal({ open, urunId, label, onClose }: Props) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
+          {submitError ? <p className="w-full text-sm text-destructive">{submitError}</p> : null}
           <AlertDialogCancel disabled={isLoading}>Vazgeç</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isLoading}
             onClick={async (e) => {
               e.preventDefault()
-              await deleteUrun(urunId).unwrap()
-              onClose()
+              try {
+                setSubmitError(null)
+                await deleteUrun(urunId).unwrap()
+                onClose()
+              } catch (error) {
+                setSubmitError(getErrorMessage(error, 'Ürün/hizmet silinemedi.'))
+              }
             }}
           >
             {isLoading ? 'Siliniyor…' : 'Evet, sil'}
