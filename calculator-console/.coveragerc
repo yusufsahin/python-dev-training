@@ -1,0 +1,14 @@
+# Proje kökünden ölçüm; test ve önbellek dosyaları hariç
+[run]
+source = .
+omit =
+    tests/*
+    */tests/*
+    .venv/*
+    .pytest_cache/*
+    **/__pycache__/*
+
+[report]
+precision = 2
+show_missing = True
+skip_empty = True

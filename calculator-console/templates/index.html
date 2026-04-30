@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hesap Makinesi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Hesap Makinesi</h1>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="first_number">Birinci Sayı</label>
+                <input type="text" id="first_number" name="first_number" value="{{ form_data.get('first_number', '') }}" placeholder="0">
+                {% if errors.get('first_number') %}
+                    <span class="error">{{ errors['first_number'] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="operation">İşlem</label>
+                <select id="operation" name="operation">
+                    <option value="">İşlem Seçiniz</option>
+                    <option value="add" {% if form_data.get('operation') == 'add' %}selected{% endif %}>Toplama (+)</option>
+                    <option value="subtract" {% if form_data.get('operation') == 'subtract' %}selected{% endif %}>Çıkarma (-)</option>
+                    <option value="multiply" {% if form_data.get('operation') == 'multiply' %}selected{% endif %}>Çarpma (*)</option>
+                    <option value="divide" {% if form_data.get('operation') == 'divide' %}selected{% endif %}>Bölme (/)</option>
+                </select>
+                {% if errors.get('operation') %}
+                    <span class="error">{{ errors['operation'] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="second_number">İkinci Sayı</label>
+                <input type="text" id="second_number" name="second_number" value="{{ form_data.get('second_number', '') }}" placeholder="0">
+                {% if errors.get('second_number') %}
+                    <span class="error">{{ errors['second_number'] }}</span>
+                {% endif %}
+            </div>
+
+            <button type="submit">Hesapla</button>
+        </form>
+
+        {% if result_text %}
+            <div class="result">
+                <h3>Sonuç</h3>
+                <p>{{ result_text }}</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
